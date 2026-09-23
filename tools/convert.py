@@ -3,18 +3,22 @@
 Wandelt die Excel-Medienliste in Dateien für die Suchseite um.
 
 Aufruf (im Hauptordner des Projekts):
-    python tools/convert.py                      # liest data/Medienliste.xlsx
-    python tools/convert.py pfad/zur/datei.xlsx  # oder eine andere Datei
+    python tools/convert.py                          # liest data/Medienliste.xlsx, schreibt nach data/
+    python tools/convert.py datei.xlsx ausgabeordner # andere Ein- und Ausgabe
+    python tools/convert.py --strict                 # bricht mit Fehler ab, wenn Spendernamen gefunden werden
 
-Erzeugt im Ordner data/:
-    medien.json      die bereinigten Daten (für Auswertungen und spätere Erweiterungen)
-    medien.js        dieselben Daten, wird von index.html geladen (funktioniert auch per Doppelklick)
-    pruefbericht.md  Liste von Auffälligkeiten in der Excel (doppelte Nummern, ungültige ISBN ...)
+Erzeugt im Ausgabeordner:
+    medien.json       die bereinigten Daten
+    medien.js         dieselben Daten, wird von index.html geladen
+    pruefbericht.md   Auffälligkeiten in der Excel (Text, für die GitHub-Zusammenfassung)
+    pruefbericht.html dasselbe als Webseite
 
 Benötigt nur:  pip install openpyxl
-Die Spalte "Spende" wird bewusst NICHT übernommen.
+Die Spalte "Spende" wird nie übernommen. Ihre Werte tauchen auch in keinem Bericht auf.
 """
+import argparse
 import datetime as dt
+import html
 import json
 import re
 import sys
@@ -24,12 +28,10 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parent.parent
-XLSX = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "data" / "Medienliste.xlsx"
-OUT = Path(sys.argv[2]) if len(sys.argv) > 2 else ROOT / "data"
 
 # Spaltenüberschrift in der Excel  ->  Feldname in den Daten.
 # Zugeordnet wird über die Überschrift, die Reihenfolge der Spalten ist egal.
-# "Spende" fehlt hier absichtlich: Spendernamen sollen nicht veröffentlicht werden.
+# "spende" wird nur zur Sicherheitsprüfung gelesen (Feld beginnt mit _) und nie ausgegeben.
 COLUMNS = {
     "autoren": "author",
     "titel": "title",
@@ -45,6 +47,7 @@ COLUMNS = {
     "sprache": "language",
     "zugang": "added",
     "zugang (datum)": "addedDate",
+    "spende": "_donation",
 }
 REQUIRED = {"author", "title"}  # Blätter ohne diese Spalten (z. B. "Rückenschilder") werden übersprungen
 
@@ -143,60 +146,41 @@ def read_workbook(path):
             added = text(raw.get("added"))
             item["added"] = None if (added is None or added.lower() == "bestand") else added
             item["addedDate"] = iso_date(raw.get("addedDate"))
+            item["_donation"] = text(raw.get("_donation"))
             item["_sheet"], item["_row"] = ws.title, rownum
             items.append(item)
     return items, skipped_sheets
 
 
 # ---------------------------------------------------------------- Prüfbericht
-def esc(s, n=70):
-    s = (s or "").replace("|", "/")
+def short(s, n=70):
+    s = s or ""
     return s if len(s) <= n else s[: n - 1] + "…"
 
 
-def table(rows, head):
-    out = ["| " + " | ".join(head) + " |", "|" + "|".join("---" for _ in head) + "|"]
-    out += ["| " + " | ".join(str(c) for c in r) + " |" for r in rows]
-    return "\n".join(out)
-
-
-def fold_block(title, body):
-    return f"<details>\n<summary>{title}</summary>\n\n{body}\n\n</details>\n"
-
-
-def build_report(items, skipped, source_name):
-    L = []
-    per_sheet = Counter(i["_sheet"] for i in items)
-    L.append("# Prüfbericht Medienliste\n")
-    L.append(f"Quelle: `{source_name}`, erstellt am {dt.datetime.now().strftime('%d.%m.%Y %H:%M')}\n")
-    L.append("Dieser Bericht zeigt Auffälligkeiten in der Excel-Datei. Nichts davon verhindert die Suche, "
-             "aber die Punkte lassen sich in der Excel korrigieren. *Zeile* ist die Zeilennummer in Excel.\n")
-    L.append("## Übersicht\n")
-    L.append(table([(s, n) for s, n in per_sheet.items()] + [("**Gesamt**", f"**{len(items)}**")], ["Blatt", "Einträge"]))
-    if skipped:
-        L.append(f"\nÜbersprungene Blätter (keine Spalten *Autoren* und *Titel*): {', '.join(skipped)}")
+def analyse(items):
+    """Liefert die Auffälligkeiten als Liste von Abschnitten (Titel, Hinweis, Tabellen)."""
 
     def ref(i):
-        return (i["_sheet"], i["_row"], i["id"] or "–", esc(i["title"]))
+        return (i["_sheet"], i["_row"], i["id"] or "–", short(i["title"]))
 
     head = ["Blatt", "Zeile", "Medien-Nr.", "Titel"]
-    findings = []
+    F = []
 
-    # Medien-Nr.
     missing_id = [i for i in items if not i["id"]]
     by_id = defaultdict(list)
     for i in items:
         if i["id"]:
             by_id[i["id"]].append(i)
     dup_id = {k: v for k, v in by_id.items() if len(v) > 1}
-    findings.append(("Medien-Nr. fehlt", len(missing_id), "Ohne Nummer lässt sich ein Medium nicht eindeutig zuordnen.",
-                     table([ref(i) for i in missing_id], head) if missing_id else ""))
-    rows = [(k, i["_sheet"], i["_row"], esc(i["title"])) for k, v in sorted(dup_id.items()) for i in v]
-    findings.append(("Medien-Nr. mehrfach vergeben", len(dup_id),
-                     f"{len(dup_id)} Nummern, die bei mehreren Einträgen stehen ({len(rows)} Zeilen).",
-                     table(rows, ["Medien-Nr.", "Blatt", "Zeile", "Titel"]) if rows else ""))
+    F.append(dict(title="Medien-Nr. fehlt", count=len(missing_id),
+                  hint="Ohne Nummer lässt sich ein Medium nicht eindeutig zuordnen.",
+                  tables=[(None, head, [ref(i) for i in missing_id])] if missing_id else []))
+    rows = [(k, i["_sheet"], i["_row"], short(i["title"])) for k, v in sorted(dup_id.items()) for i in v]
+    F.append(dict(title="Medien-Nr. mehrfach vergeben", count=len(dup_id),
+                  hint=f"{len(dup_id)} Nummern, die bei mehreren Einträgen stehen ({len(rows)} Zeilen).",
+                  tables=[(None, ["Medien-Nr.", "Blatt", "Zeile", "Titel"], rows)] if rows else []))
 
-    # ISBN
     no_isbn = [i for i in items if not i["isbn"]]
     bad_isbn = [i for i in items if i["isbn"] and not isbn_valid(i["isbn"])]
     by_isbn = defaultdict(list)
@@ -204,62 +188,140 @@ def build_report(items, skipped, source_name):
         if i["isbn"]:
             by_isbn[i["isbn"]].append(i)
     dup_isbn = {k: v for k, v in by_isbn.items() if len(v) > 1}
-    findings.append(("ISBN fehlt", len(no_isbn), "Diese Medien sind über die ISBN-Suche nicht auffindbar.",
-                     table([ref(i) for i in no_isbn], head) if no_isbn else ""))
-    findings.append(("ISBN ungültig", len(bad_isbn),
-                     "Falsche Länge oder Prüfziffer stimmt nicht (Tippfehler oder Eigencode?). Die Suche findet sie trotzdem.",
-                     table([(i["isbn"],) + ref(i) for i in bad_isbn], ["ISBN"] + head) if bad_isbn else ""))
-    rows = [(k, i["_sheet"], i["_row"], i["id"] or "–", esc(i["title"])) for k, v in sorted(dup_isbn.items()) for i in v]
-    findings.append(("ISBN mehrfach vorhanden", len(dup_isbn),
-                     "Kann gewollt sein (mehrere Exemplare), sonst Doppelerfassung.",
-                     table(rows, ["ISBN", "Blatt", "Zeile", "Medien-Nr.", "Titel"]) if rows else ""))
+    F.append(dict(title="ISBN fehlt", count=len(no_isbn),
+                  hint="Diese Medien sind über die ISBN-Suche nicht auffindbar.",
+                  tables=[(None, head, [ref(i) for i in no_isbn])] if no_isbn else []))
+    F.append(dict(title="ISBN ungültig", count=len(bad_isbn),
+                  hint="Falsche Länge oder Prüfziffer stimmt nicht (Tippfehler oder Eigencode?). Die Suche findet sie trotzdem.",
+                  tables=[(None, ["ISBN"] + head, [(i["isbn"],) + ref(i) for i in bad_isbn])] if bad_isbn else []))
+    rows = [(k, i["_sheet"], i["_row"], i["id"] or "–", short(i["title"])) for k, v in sorted(dup_isbn.items()) for i in v]
+    F.append(dict(title="ISBN mehrfach vorhanden", count=len(dup_isbn),
+                  hint="Kann gewollt sein (mehrere Exemplare), sonst Doppelerfassung.",
+                  tables=[(None, ["ISBN", "Blatt", "Zeile", "Medien-Nr.", "Titel"], rows)] if rows else []))
 
-    # Medienart / Signatur
     no_type = [i for i in items if not i["type"]]
-    by_sheet_notype = Counter(i["_sheet"] for i in no_type)
-    body = ""
+    per_sheet = Counter(i["_sheet"] for i in no_type)
+    tables = []
     if no_type:
-        body = table([(s, n) for s, n in by_sheet_notype.items()], ["Blatt", "Einträge ohne Medienart"])
-        few = [i for i in no_type if by_sheet_notype[i["_sheet"]] <= 30]
+        tables.append((None, ["Blatt", "Einträge ohne Medienart"], list(per_sheet.items())))
+        few = [i for i in no_type if per_sheet[i["_sheet"]] <= 30]
         if few:
-            body += "\n\nEinzeln aufgeführt (Blätter mit bis zu 30 Fällen):\n\n" + table([ref(i) for i in few], head)
-    findings.append(("Medienart fehlt", len(no_type),
-                     "Diese Medien erscheinen nur unter „Ohne Angabe“ im Filter Medienart.", body))
+            tables.append(("Einzeln aufgeführt (Blätter mit bis zu 30 Fällen)", head, [ref(i) for i in few]))
+    F.append(dict(title="Medienart fehlt", count=len(no_type),
+                  hint="Diese Medien erscheinen nur unter „Ohne Angabe“ im Filter Medienart.", tables=tables))
 
     no_sig = [i for i in items if not i["signature"]]
-    findings.append(("Signatur fehlt", len(no_sig), "Ohne Signatur kann das Rückenschild in der Suche nicht angezeigt werden.",
-                     table([ref(i) for i in no_sig], head) if no_sig else ""))
+    F.append(dict(title="Signatur fehlt", count=len(no_sig),
+                  hint="Ohne Signatur kann das Rückenschild in der Suche nicht angezeigt werden.",
+                  tables=[(None, head, [ref(i) for i in no_sig])] if no_sig else []))
     variants = defaultdict(Counter)
     for i in items:
         if i["signature"]:
             variants[i["signature"].lower()][i["signature"]] += 1
-    mixed = {k: v for k, v in variants.items() if len(v) > 1}
-    findings.append(("Signatur uneinheitlich geschrieben", len(mixed), "Gleiche Signatur mit unterschiedlicher Groß-/Kleinschreibung.",
-                     table([(" / ".join(f"{s} ({n}×)" for s, n in v.items()),) for v in mixed.values()], ["Schreibweisen"]) if mixed else ""))
+    mixed = [v for v in variants.values() if len(v) > 1]
+    F.append(dict(title="Signatur uneinheitlich geschrieben", count=len(mixed),
+                  hint="Gleiche Signatur mit unterschiedlicher Groß-/Kleinschreibung.",
+                  tables=[(None, ["Schreibweisen"], [(" / ".join(f"{s} ({n}×)" for s, n in v.items()),) for v in mixed])] if mixed else []))
 
+    # Sicherheitsprüfung: in "Spende" darf nur "x" oder nichts stehen. Die Werte selbst werden NICHT ausgegeben.
+    donors = [i for i in items if i["_donation"] and i["_donation"].lower() != "x"]
+    F.append(dict(title="Spalte „Spende“ enthält Namen statt „x“", count=len(donors),
+                  hint="Spendernamen dürfen nicht veröffentlicht werden. Bitte durch „x“ ersetzen (nur Zeilennummern, keine Namen aufgeführt).",
+                  tables=[(None, ["Blatt", "Zeile"], [(i["_sheet"], i["_row"]) for i in donors])] if donors else []))
+    return F, donors
+
+
+def md_table(head, rows):
+    esc = lambda c: str(c).replace("|", "/")
+    out = ["| " + " | ".join(esc(h) for h in head) + " |", "|" + "|".join("---" for _ in head) + "|"]
+    return "\n".join(out + ["| " + " | ".join(esc(c) for c in r) + " |" for r in rows])
+
+
+def render_md(items, findings, skipped, source):
+    per_sheet = Counter(i["_sheet"] for i in items)
+    L = ["# Prüfbericht Medienliste\n",
+         f"Quelle: `{source}`, erstellt am {dt.datetime.now().strftime('%d.%m.%Y %H:%M')}\n",
+         "Auffälligkeiten in der Excel-Datei. Nichts davon verhindert die Suche, aber die Punkte lassen sich in der Excel korrigieren. "
+         "*Zeile* ist die Zeilennummer in Excel.\n",
+         "## Übersicht\n",
+         md_table(["Blatt", "Einträge"], list(per_sheet.items()) + [("**Gesamt**", f"**{len(items)}**")])]
+    if skipped:
+        L.append(f"\nÜbersprungene Blätter (keine Spalten *Autoren* und *Titel*): {', '.join(skipped)}")
     L.append("\n## Auffälligkeiten\n")
-    L.append(table([(t, n) for t, n, _, _ in findings], ["Prüfung", "Anzahl"]) + "\n")
-    for t, n, hint, body in findings:
-        L.append(f"### {t}: {n}\n")
-        L.append(hint + "\n")
-        if body:
-            L.append(fold_block("Liste anzeigen", body))
-    return "\n".join(L), {t: n for t, n, _, _ in findings}
+    L.append(md_table(["Prüfung", "Anzahl"], [(f["title"], f["count"]) for f in findings]) + "\n")
+    for f in findings:
+        L.append(f"### {f['title']}: {f['count']}\n")
+        L.append(f["hint"] + "\n")
+        for cap, head, rows in f["tables"]:
+            body = (cap + ":\n\n" if cap else "") + md_table(head, rows)
+            L.append(f"<details>\n<summary>Liste anzeigen</summary>\n\n{body}\n\n</details>\n")
+    return "\n".join(L)
+
+
+def html_table(head, rows):
+    e = lambda c: html.escape(str(c))
+    return ("<div class=\"scroll\"><table><thead><tr>" + "".join(f"<th>{e(h)}</th>" for h in head) + "</tr></thead><tbody>" +
+            "".join("<tr>" + "".join(f"<td>{e(c)}</td>" for c in r) + "</tr>" for r in rows) + "</tbody></table></div>")
+
+
+def render_html(items, findings, skipped, source):
+    e = html.escape
+    per_sheet = Counter(i["_sheet"] for i in items)
+    parts = []
+    parts.append("<h2>Übersicht</h2>" + html_table(["Blatt", "Einträge"], list(per_sheet.items()) + [("Gesamt", len(items))]))
+    if skipped:
+        parts.append(f"<p>Übersprungene Blätter (keine Spalten Autoren und Titel): {e(', '.join(skipped))}</p>")
+    parts.append("<h2>Auffälligkeiten</h2>" + html_table(["Prüfung", "Anzahl"], [(f["title"], f["count"]) for f in findings]))
+    for f in findings:
+        parts.append(f"<h3>{e(f['title'])}: {f['count']}</h3><p>{e(f['hint'])}</p>")
+        for cap, head, rows in f["tables"]:
+            parts.append(f"<details><summary>Liste anzeigen ({len(rows)})</summary>" +
+                         (f"<p>{e(cap)}:</p>" if cap else "") + html_table(head, rows) + "</details>")
+    now = dt.datetime.now().strftime("%d.%m.%Y %H:%M")
+    return f"""<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex"><title>Prüfbericht – Medienliste Bücherei Hechendorf</title>
+<style>
+body{{margin:0;background:#F2F4F1;color:#16262B;font:1rem/1.5 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}}
+main{{width:min(100% - 2rem,62rem);margin:2rem auto 3rem}}
+h1{{font:600 2rem/1.1 "Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;margin:0 0 .5rem}}
+h2{{margin:2rem 0 .5rem;font-size:1.3rem}} h3{{margin:1.75rem 0 .25rem;font-size:1.05rem}}
+p{{margin:.25rem 0 .6rem;color:#33464B}} a{{color:#1B5E73}}
+.scroll{{overflow-x:auto;margin:.5rem 0}}
+table{{border-collapse:collapse;background:#fff;font-size:.9rem;min-width:24rem}}
+th,td{{padding:.4rem .7rem;border:1px solid #D3DAD7;text-align:left;vertical-align:top}} th{{background:#DDEBEF}}
+details{{margin:.4rem 0}} summary{{cursor:pointer;color:#1B5E73;font-weight:600;padding:.3rem 0}}
+</style></head><body><main>
+<p><a href="./">← Zur Suche</a></p>
+<h1>Prüfbericht Medienliste</h1>
+<p>Quelle: {e(source)}, erstellt am {now}. Die Liste zeigt Auffälligkeiten in der Excel-Datei. Nichts davon verhindert die Suche. Zeile ist die Zeilennummer in Excel.</p>
+{''.join(parts)}
+</main></body></html>
+"""
 
 
 # ---------------------------------------------------------------- Ausgabe
 def main():
-    if not XLSX.exists():
-        sys.exit(f"Datei nicht gefunden: {XLSX}\nBitte die Excel-Liste als data/Medienliste.xlsx ablegen.")
-    items, skipped = read_workbook(XLSX)
+    ap = argparse.ArgumentParser(description="Excel-Medienliste in Daten für die Suchseite umwandeln")
+    ap.add_argument("xlsx", nargs="?", default=str(ROOT / "data" / "Medienliste.xlsx"))
+    ap.add_argument("out", nargs="?", default=str(ROOT / "data"))
+    ap.add_argument("--strict", action="store_true", help="mit Fehler abbrechen, wenn Spendernamen in der Excel stehen")
+    args = ap.parse_args()
+    xlsx, out = Path(args.xlsx), Path(args.out)
+
+    if not xlsx.exists():
+        sys.exit(f"Datei nicht gefunden: {xlsx}\nBitte die Excel-Liste als data/Medienliste.xlsx ablegen.")
+    items, skipped = read_workbook(xlsx)
     if not items:
         sys.exit("Keine Einträge gefunden. Erwartet werden Blätter mit den Spalten 'Autoren' und 'Titel'.")
 
-    report, counts = build_report(items, skipped, XLSX.name)
+    findings, donors = analyse(items)
+    if donors and args.strict:
+        rows = ", ".join(f"{i['_sheet']} Zeile {i['_row']}" for i in donors[:10])
+        sys.exit(f"ABGEBROCHEN: In der Spalte 'Spende' stehen bei {len(donors)} Einträgen Namen statt 'x' ({rows} ...). "
+                 "Spendernamen dürfen nicht veröffentlicht werden. Bitte in der Excel durch 'x' ersetzen und neu hochladen.")
 
-    public = []
-    for i in items:
-        public.append({k: v for k, v in i.items() if not k.startswith("_") and v not in (None, "")})
+    public = [{k: v for k, v in i.items() if not k.startswith("_") and v not in (None, "")} for i in items]
     data = {
         "meta": {
             "generated": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -270,16 +332,16 @@ def main():
     }
     payload = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
 
-    OUT.mkdir(parents=True, exist_ok=True)
-    (OUT / "medien.json").write_text(payload, encoding="utf-8")
-    (OUT / "medien.js").write_text("window.MEDIEN=" + payload + ";\n", encoding="utf-8")
-    (OUT / "pruefbericht.md").write_text(report, encoding="utf-8")
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "medien.json").write_text(payload, encoding="utf-8")
+    (out / "medien.js").write_text("window.MEDIEN=" + payload + ";\n", encoding="utf-8")
+    (out / "pruefbericht.md").write_text(render_md(items, findings, skipped, xlsx.name), encoding="utf-8")
+    (out / "pruefbericht.html").write_text(render_html(items, findings, skipped, xlsx.name), encoding="utf-8")
 
-    print(f"{len(public)} Medien aus {len(data['meta']['sheets'])} Blatt/Blättern übernommen -> {OUT}")
-    for k, v in counts.items():
-        if v:
-            print(f"  Hinweis: {k}: {v}")
-    print("Details: data/pruefbericht.md")
+    print(f"{len(public)} Medien aus {len(data['meta']['sheets'])} Blatt/Blättern übernommen -> {out}")
+    for f in findings:
+        if f["count"]:
+            print(f"  Hinweis: {f['title']}: {f['count']}")
 
 
 if __name__ == "__main__":

@@ -1,50 +1,82 @@
 # Medienliste Bücherei Hechendorf
 
-Suchseite für die Medienliste: Suche nach Titel, Autor, ISBN und Medienart.
-Reine statische Webseite, läuft auf GitHub Pages ohne Server.
+Suchseite für die Medienliste (Titel, Autor, ISBN, Medienart) mit Verwaltungsseite zum Aktualisieren der Excel-Liste.
+Läuft komplett auf GitHub Pages, ohne eigenen Server.
 
-## Inhalt
+- **Suche:** `https://<benutzer>.github.io/<repository>/`
+- **Verwaltung (Büchereiteam):** `https://<benutzer>.github.io/<repository>/verwaltung.html`
+- **Prüfbericht** (Auffälligkeiten in der Excel): `.../data/pruefbericht.html`
+
+Die Anleitung für das Team steht in [`ANLEITUNG.md`](ANLEITUNG.md).
+
+## So funktioniert es
+
+```
+Excel hochladen ──► Verwaltungsseite ──► data/Medienliste.xlsx im Repository
+(bereinigt, geprüft,                            │
+ mit Vorschau)                                  ▼
+                                    GitHub Action "Website aktualisieren"
+                                    prüft die Excel, erzeugt die Suchdaten
+                                                │
+                                                ▼
+                                    GitHub Pages: Suche + Excel-Download
+```
+
+- Die Excel-Datei im Repository ist die einzige Quelle. Alle laden dieselbe Datei herunter und wieder hoch.
+- Jede Änderung wird von Git gespeichert. Frühere Versionen lassen sich auf der Verwaltungsseite herunterladen.
+- Ist die Excel fehlerhaft (z. B. fehlen die Spalten *Autoren* und *Titel*), bricht die Action ab und die bisherige Suchseite bleibt unverändert online.
+
+## Einmalige Einrichtung (Verwalter)
+
+1. **GitHub-Konto:** Empfohlen ist ein gemeinsames Konto der Bücherei (z. B. `buecherei-hechendorf`). Grund: Ein Zugriffsschlüssel funktioniert nur für Repositories, die dem Konto gehören, das ihn erstellt hat. Wer den Schlüssel benutzt, wird im Änderungsverlauf trotzdem mit Namen genannt, weil die Verwaltungsseite den eingegebenen Namen in die Änderungsnachricht schreibt.
+2. **Repository anlegen:** Neues **öffentliches** Repository, z. B. `medienliste`.
+3. **Dateien hochladen:** *Add file → Upload files* und den gesamten Inhalt dieses Ordners hineinziehen (`index.html`, `verwaltung.html`, `data/`, `tools/`, `vendor/`, `README.md`, `ANLEITUNG.md`, `.gitignore`).
+   Der versteckte Ordner `.github` wird beim Hochladen im Browser oft nicht mitgenommen. Dann so anlegen: *Add file → Create new file*, als Namen `.github/workflows/website.yml` eintippen (die Schrägstriche legen die Ordner an) und den Inhalt der mitgelieferten Datei `website.yml` einfügen.
+4. **Pages einschalten:** *Settings → Pages → Build and deployment → Source: **GitHub Actions***.
+5. **Erster Lauf:** Im Reiter *Actions* den Lauf „Website aktualisieren“ abwarten. Startet er nicht von selbst: *Run workflow*. Danach ist die Suche unter der Adresse oben erreichbar.
+6. **Zugriffsschlüssel erstellen** (mit dem Konto aus Schritt 1): <https://github.com/settings/personal-access-tokens/new>
+   - Name: `Medienliste`, Ablauf: 1 Jahr
+   - *Repository access → Only select repositories* → das Repository auswählen
+   - *Repository permissions → Contents → Read and write*
+   - Schlüssel kopieren (`github_pat_…`) und dem Team geben (persönlich oder per Passwortmanager, nicht per E-Mail).
+7. **Test:** Auf `verwaltung.html` verbinden, die Excel herunterladen, eine Kleinigkeit ändern, hochladen, veröffentlichen. Die Statusanzeige muss „Fertig“ melden und die Änderung in der Suche erscheinen.
+
+Läuft der Schlüssel ab oder soll jemand keinen Zugriff mehr haben: Schlüssel unter *Settings → Developer settings → Fine-grained tokens* löschen und einen neuen erstellen.
+
+## Datenschutz
+
+Das Repository und die Excel-Datei sind öffentlich einsehbar. Deshalb gilt:
+
+- **Spendernamen:** Die Spalte *Spende* darf nur „x“ oder nichts enthalten. Beim Hochladen ersetzt die Verwaltungsseite Namen automatisch durch „x“. Zusätzlich bricht die Action ab, falls doch Namen in der Excel stehen, und nennt nur Zeilennummern.
+- **Dateieigenschaften:** Beim Hochladen werden Autor, letzter Bearbeiter, lokaler Ordnerpfad und Namen aus Kommentar-Verwaltung entfernt. Sonst würden die Namen der Bearbeiter mit veröffentlicht.
+- **Kommentare in Zellen** bleiben erhalten und sind öffentlich. Keine vertraulichen Notizen als Excel-Kommentar ablegen.
+- **Nur über die Verwaltungsseite hochladen.** Wer die Excel direkt über die GitHub-Oberfläche hochlädt, umgeht die automatische Bereinigung.
+- Die Suchseite selbst lädt nichts von fremden Servern (keine Google-Schriften, kein CDN). Die zwei Bibliotheken der Verwaltungsseite liegen im Ordner `vendor/`.
+
+## Dateien
 
 | Datei | Zweck |
 |---|---|
-| `index.html` | die Suchseite (alles in einer Datei, keine externen Dienste, keine Schriften von Google) |
-| `data/medien.js` | die Daten, die die Seite lädt (wird aus der Excel erzeugt) |
-| `data/medien.json` | dieselben Daten als JSON |
-| `data/pruefbericht.md` | Auffälligkeiten in der Excel: doppelte Nummern, fehlende oder ungültige ISBN usw. |
-| `tools/convert.py` | wandelt die Excel in die Datendateien um |
+| `index.html` | Suchseite |
+| `verwaltung.html` | Download, Upload mit Prüfung und Vorschau, Versionsverlauf |
+| `data/Medienliste.xlsx` | die Excel-Liste (Quelle aller Daten) |
+| `tools/convert.py` | Excel → Suchdaten und Prüfbericht (läuft in der Action, lokal mit `python tools/convert.py`) |
+| `.github/workflows/website.yml` | die Action „Website aktualisieren“ |
+| `vendor/` | SheetJS und JSZip für die Verwaltungsseite (Lizenzen in `vendor/LICENSES.md`) |
 
-Die Spalte **Spende** wird nicht übernommen. Spendernamen tauchen weder in den Daten noch auf der Seite auf.
-
-## Auf GitHub veröffentlichen
-
-1. Auf github.com ein neues **öffentliches** Repository anlegen, z. B. `medienliste`.
-2. Den Inhalt dieses Ordners hochladen (*Add file → Upload files*, alle Dateien und Ordner hineinziehen).
-3. *Settings → Pages → Build and deployment → Source: Deploy from a branch*, Branch `main`, Ordner `/ (root)`, speichern.
-4. Nach ein bis zwei Minuten ist die Seite erreichbar unter `https://<benutzername>.github.io/medienliste/`.
+Erzeugt werden bei jedem Lauf (nicht im Repository): `medien.js`, `medien.json`, `pruefbericht.md`, `pruefbericht.html`.
 
 ## Lokal ausprobieren
 
-`index.html` per Doppelklick öffnen. Das funktioniert ohne Server, weil die Daten als `medien.js` geladen werden.
+`pip install openpyxl`, dann `python tools/convert.py` und danach `index.html` per Doppelklick öffnen.
 
-## Daten aktualisieren (bis Phase 2 fertig ist)
+## Excel-Spalten
 
-1. Aktuelle Excel als `data/Medienliste.xlsx` ablegen (die Datei ist in `.gitignore` eingetragen und wird nicht mit hochgeladen).
-2. Einmalig `pip install openpyxl`, dann `python tools/convert.py`.
-3. Geänderte Dateien in `data/` auf GitHub hochladen.
-
-In Phase 2 übernimmt eine GitHub Action diese Schritte automatisch.
-
-Die Zuordnung der Excel-Spalten erfolgt über die Überschriften (`Autoren`, `Titel`, `Medien-Nr.`, `Signatur`, `Publikationsdatum`, `Verlag`, `Seiten`, `ISBN`, `Standort`, `Anzahl CD`, `Medienart`, `Sprache`, `Zugang`, `Zugang (Datum)`). Die Reihenfolge der Spalten darf sich ändern, die Überschriften sollten gleich bleiben. Alle Blätter mit den Spalten `Autoren` und `Titel` werden eingelesen, andere (z. B. `Rückenschilder`) ignoriert.
+Die Zuordnung erfolgt über die Überschriften in Zeile 1: `Autoren`, `Titel`, `Medien-Nr.`, `Signatur`, `Publikationsdatum`, `Verlag`, `Seiten`, `ISBN`, `Standort`, `Anzahl CD`, `Medienart`, `Sprache`, `Zugang`, `Zugang (Datum)`, `Spende`.
+Die Reihenfolge der Spalten darf sich ändern, die Überschriften bitte nicht. Alle Blätter mit den Spalten `Autoren` und `Titel` werden gelesen, andere (z. B. `Rückenschilder`) ignoriert.
 
 ## Anpassen
 
-- **Farben der Rückenschilder:** in `index.html` das Objekt `SIGNATUR_FARBEN` ändern. Nicht aufgeführte Signaturen bekommen automatisch eine feste Farbe.
+- **Farben der Rückenschilder:** in `index.html` das Objekt `SIGNATUR_FARBEN`.
 - **Trefferzahl pro Seite:** `PAGE` in `index.html`.
-
-## So sucht die Seite
-
-- Alle Suchwörter müssen vorkommen, die Reihenfolge ist egal (`Astrid Lindgren` findet `Lindgren, Astrid`).
-- Umlaute und Groß-/Kleinschreibung sind egal (`Müller`, `Mueller` und `Muller` finden sich gegenseitig, ebenso `Straße` und `Strasse`).
-- ISBN mit oder ohne Bindestriche, als ISBN-10 oder ISBN-13.
-- Auch die Medien-Nr. (`1399`), die Medienart (`Tonie`), das Erscheinungsjahr und der Verlag werden bei "Suchen in: Allem" berücksichtigt.
-- Die Adresszeile enthält die aktuelle Suche und lässt sich als Link weitergeben.
+- **Zwischenspeicher:** GitHub Pages speichert Seiten bis zu 10 Minuten zwischen. Eine Änderung kann daher etwas verzögert sichtbar werden.
