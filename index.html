@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Medienliste – Bücherei Hechendorf</title>
+<meta name="description" content="Bücher, CDs, Tonies und Spiele der Bücherei Hechendorf durchsuchen: nach Titel, Autor, ISBN oder Medienart.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='6' y='6' width='52' height='52' rx='8' fill='%231B5E73'/%3E%3Crect x='11' y='11' width='42' height='42' rx='4' fill='none' stroke='%23fff' stroke-opacity='.6' stroke-width='2'/%3E%3Cpath d='M22 44V20h6v10l8-10h7l-9 11 10 13h-7l-9-12v12z' fill='%23fff'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --paper: #F2F4F1;
+    --surface: #FFFFFF;
+    --ink: #16262B;
+    --ink-soft: #33464B;
+    --muted: #566468;
+    --line: #D3DAD7;
+    --lake: #1B5E73;
+    --lake-soft: #DDEBEF;
+    --mark: #FFE07A;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 1rem/1.5 var(--sans);
+  }
+  .wrap { width: min(100% - 2rem, 62rem); margin-inline: auto; }
+
+  /* Kopf */
+  .top { border-bottom: 1px solid var(--line); background: var(--surface); }
+  .top .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: .25rem 1.5rem; padding-block: .75rem; }
+  .brand { margin: 0; font: 600 1rem/1.2 var(--serif); color: var(--lake); }
+  .stand { margin: 0; font-size: .85rem; color: var(--muted); }
+
+  h1 { margin: 2rem 0 1rem; font: 600 clamp(2.1rem, 6vw, 3.25rem)/1.05 var(--serif); letter-spacing: -.015em; }
+
+  /* Suche */
+  .searchbox { position: relative; }
+  .searchbox svg { position: absolute; left: 1rem; top: 50%; translate: 0 -50%; width: 1.4rem; height: 1.4rem; color: var(--lake); pointer-events: none; }
+  #q {
+    width: 100%; height: 3.6rem; padding: 0 1rem 0 3.1rem;
+    font: 1.2rem/1 var(--sans); color: var(--ink);
+    background: var(--surface); border: 2px solid var(--lake); border-radius: 10px;
+    appearance: none; -webkit-appearance: none;
+  }
+  #q::placeholder { color: #6E7C80; }
+  #q:focus-visible, select:focus-visible, button:focus-visible { outline: 3px solid var(--lake); outline-offset: 2px; }
+  #q::-webkit-search-cancel-button { height: 1.2rem; width: 1.2rem; }
+
+  .filterbox { margin-top: .9rem; }
+  .filterbox > summary { display: flex; align-items: center; gap: .5rem; min-height: 2.5rem; padding: .2rem 0; font-weight: 600; color: var(--lake); cursor: pointer; }
+  #fcount:not(:empty) { padding: 0 .5rem; font-size: .8rem; line-height: 1.5; color: #fff; background: var(--lake); border-radius: 999px; }
+  .filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; margin-top: .4rem; }
+  .filters label { display: block; margin-bottom: .2rem; font-size: .8rem; color: var(--muted); }
+  select {
+    width: 100%; min-height: 2.5rem; padding: .35rem .6rem;
+    font: .95rem/1.2 var(--sans); color: var(--ink);
+    background: var(--surface); border: 1px solid #B9C3C0; border-radius: 8px;
+  }
+  select.active { border-color: var(--lake); background: var(--lake-soft); }
+
+  /* Ergebnisleiste */
+  .statusbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; min-height: 2.5rem; margin: 1.5rem 0 .5rem; }
+  #status { margin: 0; font-weight: 600; }
+  .linkbtn { padding: .4rem .2rem; font: inherit; font-size: .95rem; color: var(--lake); text-decoration: underline; text-underline-offset: 3px; background: none; border: 0; cursor: pointer; }
+
+  /* Trefferliste */
+  .results { margin: 0; padding: 0; list-style: none; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .item { display: grid; grid-template-columns: 3.4rem minmax(0, 1fr); gap: .75rem 1rem; padding: 1rem; border-top: 1px solid var(--line); }
+  .item:first-child { border-top: 0; }
+
+  /* Rückenschild: die Signatur, wie der Aufkleber am Buchrücken */
+  .spine {
+    --tone: #5A5F63;
+    display: grid; place-items: center; align-self: start;
+    width: 3.4rem; height: 3.4rem; padding: .3rem;
+    background: var(--tone); color: #fff; border-radius: 4px;
+    box-shadow: inset 0 0 0 3px var(--tone), inset 0 0 0 4.5px rgba(255,255,255,.55);
+    font: 700 1.05rem/1.05 var(--sans); text-align: center; overflow-wrap: anywhere;
+  }
+  .spine.long { font-size: .68rem; }
+
+  .head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: .25rem .75rem; }
+  .title { margin: 0; font: 600 1.2rem/1.28 var(--serif); }
+  .author { margin: .15rem 0 0; color: var(--ink-soft); }
+  .type { flex: none; padding: .1rem .55rem; font-size: .8rem; color: var(--lake); background: var(--lake-soft); border-radius: 999px; }
+
+  .facts { display: flex; flex-wrap: wrap; gap: .4rem 1.6rem; margin: .7rem 0 0; }
+  .facts div { min-width: 0; }
+  .facts dt { font-size: .75rem; line-height: 1.2; color: var(--muted); }
+  .facts dd { margin: 0; font-size: .92rem; line-height: 1.35; }
+  .facts .loc dd { font-weight: 700; }
+  .facts .num { font-variant-numeric: tabular-nums; }
+
+  mark { padding: 0 .08em; color: inherit; background: var(--mark); border-radius: 2px; }
+  [hidden] { display: none !important; }
+  .sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+  .more { display: block; margin: 1.25rem auto 0; padding: .7rem 1.4rem; font: 600 1rem/1 var(--sans); color: #fff; background: var(--lake); border: 0; border-radius: 8px; cursor: pointer; }
+  .empty { padding: 2rem 1.25rem; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+  .empty h2 { margin: 0 0 .5rem; font: 600 1.25rem/1.3 var(--serif); }
+  .empty p { margin: .25rem 0; color: var(--ink-soft); }
+
+  footer { margin: 3rem 0 2rem; font-size: .85rem; color: var(--muted); }
+  footer a { color: var(--lake); }
+
+  @media (min-width: 760px) {
+    .filterbox > summary { display: none; }
+    .filters { margin-top: 1rem; }
+    .filters { grid-template-columns: 1.1fr 1.3fr 1.3fr 1fr 1.3fr; }
+    .item { grid-template-columns: 4.25rem minmax(0, 1fr); gap: 1rem 1.5rem; padding: 1.15rem 1.5rem; }
+    .spine { width: 4.25rem; height: 4.25rem; font-size: 1.2rem; }
+    .spine.long { font-size: .78rem; }
+  }
+  @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <p class="brand">Bücherei Hechendorf</p>
+    <p class="stand" id="stand"></p>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1>Medienliste</h1>
+
+  <form role="search" id="form" autocomplete="off">
+    <div class="searchbox">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>
+      <label for="q" class="sr">Suchen nach Titel, Autor oder ISBN</label>
+      <input id="q" type="search" inputmode="search" enterkeyhint="search" spellcheck="false" placeholder="Titel, Autor oder ISBN" autocomplete="off">
+    </div>
+
+    <details class="filterbox" id="filterbox">
+    <summary>Filter und Sortierung<span id="fcount"></span></summary>
+    <div class="filters">
+      <div><label for="mode">Suchen in</label>
+        <select id="mode">
+          <option value="all">Allem</option>
+          <option value="title">Titel</option>
+          <option value="author">Autor</option>
+          <option value="isbn">ISBN</option>
+        </select></div>
+      <div><label for="art">Medienart</label><select id="art"></select></div>
+      <div><label for="ort">Standort</label><select id="ort"></select></div>
+      <div><label for="sig">Signatur</label><select id="sig"></select></div>
+      <div><label for="sort">Sortierung</label>
+        <select id="sort">
+          <option value="rel">Beste Treffer</option>
+          <option value="title">Titel A–Z</option>
+          <option value="author">Autor A–Z</option>
+          <option value="added">Zuletzt hinzugefügt</option>
+        </select></div>
+    </div>
+    </details>
+  </form>
+
+  <div class="statusbar">
+    <p id="status" role="status" aria-live="polite">Medienliste wird geladen …</p>
+    <button type="button" class="linkbtn" id="reset" hidden>Suche zurücksetzen</button>
+  </div>
+
+  <div id="out"></div>
+  <button type="button" class="more" id="more" hidden></button>
+</main>
+
+<footer class="wrap">
+  <p>Angaben ohne Gewähr. Ein Medium kann verliehen sein, auch wenn es hier aufgeführt ist.</p>
+  <p><a href="verwaltung.html">Für das Büchereiteam: Liste aktualisieren</a></p>
+</footer>
+
+<script src="data/medien.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ------------------------------------------------------------------
+     Farben der Rückenschilder. Ein Eintrag pro Signatur; alle anderen
+     Signaturen bekommen automatisch eine feste Farbe aus der Palette.
+     Hier lassen sich die Farben an die echten Aufkleber angleichen.
+  ------------------------------------------------------------------ */
+  var SIGNATUR_FARBEN = {
+    'K': '#1B5E73', 'KK': '#8A6100', 'KE': '#3F6B3A', 'J': '#7A3E65',
+    'SL': '#2F5D8C', 'KSach': '#A4472B', 'Sach': '#5B4B8A', 'MSP': '#5A5F63'
+  };
+  var PALETTE = ['#1B5E73', '#7A3E65', '#3F6B3A', '#A4472B', '#5B4B8A', '#8A6100', '#2F5D8C', '#5A5F63'];
+  var PAGE = 40;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var nf = new Intl.NumberFormat('de-DE');
+  var collator = new Intl.Collator('de', { numeric: true, sensitivity: 'base' });
+
+  /* ---------- Text normalisieren: ohne Umlaute/Akzente, klein geschrieben ---------- */
+  function fold(s) {
+    var f = '', map = [];
+    for (var i = 0; i < s.length; i++) {
+      var ch = s.charAt(i);
+      var d = ch === 'ß' ? 'ss' : ch.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      for (var k = 0; k < d.length; k++) { f += d.charAt(k); map.push(i); }
+    }
+    return { f: f, map: map };
+  }
+  // "Müller", "Mueller" und "Muller" sollen sich gegenseitig finden
+  function collapse(s) { return s.replace(/ae/g, 'a').replace(/oe/g, 'o').replace(/ue/g, 'u'); }
+  function norm(s) { return collapse(fold(s || '').f); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+  function isbn10to13(d) {
+    if (!/^\d{9}[\dx]$/.test(d)) return '';
+    var b = '978' + d.slice(0, 9), s = 0;
+    for (var i = 0; i < 12; i++) s += (+b.charAt(i)) * (i % 2 ? 3 : 1);
+    return b + ((10 - s % 10) % 10);
+  }
+
+  /* ---------- Daten laden ---------- */
+  var DATA = window.MEDIEN;
+  if (!DATA || !DATA.items) {
+    $('status').textContent = 'Die Medienliste konnte nicht geladen werden.';
+    $('out').innerHTML = '<div class="empty"><h2>Daten fehlen</h2><p>Die Datei <code>data/medien.js</code> wurde nicht gefunden. Sie entsteht mit <code>python tools/convert.py</code> aus der Excel-Liste.</p></div>';
+    return;
+  }
+  var items = DATA.items;
+  items.forEach(function (it) {
+    var t = fold(it.title || '').f, a = fold(it.author || '').f;
+    it._t = collapse(t);
+    it._a = collapse(a);
+    it._v = norm(it.publisher);
+    it._m = norm(it.type);
+    it._o = norm(it.location);
+    it._i = (it.isbn || '').toLowerCase();
+    it._i13 = it._i.length === 10 ? isbn10to13(it._i) : '';
+    it._n = (it.id || '').toLowerCase();
+    it._st = t.replace(/^[^a-z0-9]+/, '');
+    it._sa = a.replace(/^[^a-z0-9]+/, '');
+  });
+
+  var stand = DATA.meta && DATA.meta.generated ? new Date(DATA.meta.generated) : null;
+  $('stand').textContent = nf.format(items.length) + ' Medien' + (stand ? ', Stand ' + stand.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '');
+
+  /* ---------- Filter-Auswahllisten ---------- */
+  function counts(key) {
+    var c = {};
+    items.forEach(function (it) { if (it[key]) c[it[key]] = (c[it[key]] || 0) + 1; });
+    return c;
+  }
+  function fillSelect(id, allLabel, c, sortByCount, extra) {
+    var keys = Object.keys(c);
+    keys.sort(sortByCount ? function (x, y) { return c[y] - c[x] || collator.compare(x, y); } : collator.compare);
+    var html = '<option value="">' + allLabel + '</option>';
+    keys.forEach(function (k) { html += '<option value="' + esc(k) + '">' + esc(k) + ' (' + nf.format(c[k]) + ')</option>'; });
+    if (extra) html += extra;
+    $(id).innerHTML = html;
+  }
+  var noType = items.filter(function (it) { return !it.type; }).length;
+  fillSelect('art', 'Alle Medienarten', counts('type'), true, noType ? '<option value="__none__">Ohne Angabe (' + nf.format(noType) + ')</option>' : '');
+  fillSelect('ort', 'Alle Standorte', counts('location'), false);
+  fillSelect('sig', 'Alle Signaturen', counts('signature'), false);
+
+  /* ---------- Suchanfrage zerlegen ---------- */
+  function parseQuery(raw) {
+    // ISBN mit Bindestrichen (978-3-499-21743-2) -> nur Ziffern
+    var q = raw.trim().replace(/\b\d[\d-]{8,16}[\dXx]\b/g, function (m) {
+      var d = m.replace(/-/g, '');
+      return /^(\d{10}|\d{13}|\d{9}[\dXx])$/.test(d) ? d : m;
+    });
+    var tokens = [];
+    q.split(/\s+/).forEach(function (w) {
+      var f = fold(w).f.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '');
+      if (!f) return;
+      var c = collapse(f);
+      var tk = { f: f, c: c, hv: c === f ? [f] : [f, c], isbn: null };
+      if (/^\d{9}[\dx]$/.test(f)) tk.isbn = [f, isbn10to13(f)];
+      else if (/^\d+$/.test(f)) tk.isbn = [f];
+      tokens.push(tk);
+    });
+    return tokens;
+  }
+
+  // 0 = nicht gefunden, 1 = mitten im Wort, 2 = am Wortanfang
+  function find(text, v) {
+    var i = text.indexOf(v);
+    if (i < 0) return 0;
+    while (i >= 0) {
+      if (i === 0 || !/[a-z0-9]/.test(text.charAt(i - 1))) return 2;
+      i = text.indexOf(v, i + 1);
+    }
+    return 1;
+  }
+
+  function tokenScore(it, tk, mode) {
+    var s = 0, r;
+    var v = tk.c;
+    if (mode === 'all' || mode === 'title') {
+      r = find(it._t, v);
+      if (r) { s += r === 2 ? 4 : 2; if (it._t.indexOf(v) === 0) s += 2; }
+    }
+    if (mode === 'all' || mode === 'author') {
+      r = find(it._a, v);
+      if (r) s += r === 2 ? 4 : 2;
+    }
+    if (mode === 'all') {
+      if (find(it._m, v)) s += 2;
+      if (find(it._o, v)) s += 2;
+      if (find(it._v, v)) s += 1;
+      if (it._n && it._n === v) s += 6;
+      if (/^\d{4}$/.test(v) && String(it.year) === v) s += 2;
+    }
+    if (tk.isbn && it._i && (mode === 'all' || mode === 'isbn')) {
+      var minLen = mode === 'isbn' ? 3 : 6;
+      for (var k = 0; k < tk.isbn.length; k++) {
+        var cand = tk.isbn[k];
+        if (cand.length >= minLen && (it._i.indexOf(cand) >= 0 || (it._i13 && it._i13.indexOf(cand) >= 0))) { s += 6; break; }
+      }
+    }
+    return s;
+  }
+
+  /* ---------- Suchen, filtern, sortieren ---------- */
+  var state = { q: '', mode: 'all', art: '', ort: '', sig: '', sort: 'rel' };
+  var results = [], tokens = [], shown = PAGE;
+
+  function compute() {
+    tokens = parseQuery(state.q);
+    var phrase = tokens.map(function (t) { return t.c; }).join(' ');
+    var list = [];
+    for (var n = 0; n < items.length; n++) {
+      var it = items[n];
+      if (state.art) {
+        if (state.art === '__none__' ? it.type : it.type !== state.art) continue;
+      }
+      if (state.ort && it.location !== state.ort) continue;
+      if (state.sig && it.signature !== state.sig) continue;
+      var score = 0;
+      if (tokens.length) {
+        var ok = true;
+        for (var k = 0; k < tokens.length; k++) {
+          var s = tokenScore(it, tokens[k], state.mode);
+          if (!s) { ok = false; break; }
+          score += s;
+        }
+        if (!ok) continue;
+        if (tokens.length > 1 && it._t.indexOf(phrase) >= 0) score += 5;
+      }
+      list.push({ it: it, score: score });
+    }
+    var by = state.sort;
+    if (by === 'rel' && !tokens.length) by = 'title';
+    list.sort(function (a, b) {
+      if (by === 'rel' && b.score !== a.score) return b.score - a.score;
+      if (by === 'author') return collator.compare(a.it._sa, b.it._sa) || collator.compare(a.it._st, b.it._st);
+      if (by === 'added') {
+        var da = a.it.addedDate || '', db = b.it.addedDate || '';
+        if (da !== db) return da < db ? 1 : -1;
+      }
+      return collator.compare(a.it._st, b.it._st);
+    });
+    results = list.map(function (x) { return x.it; });
+  }
+
+  /* ---------- Darstellung ---------- */
+  function toneFor(sig) {
+    if (!sig) return '#5A5F63';
+    if (SIGNATUR_FARBEN[sig]) return SIGNATUR_FARBEN[sig];
+    var base = sig.replace(/_.*$/, '');
+    if (SIGNATUR_FARBEN[base]) return SIGNATUR_FARBEN[base];
+    var h = 0;
+    for (var i = 0; i < base.length; i++) h = (h * 31 + base.charCodeAt(i)) >>> 0;
+    return PALETTE[h % PALETTE.length];
+  }
+
+  function highlight(text) {
+    if (!text) return '';
+    var hts = [];
+    tokens.forEach(function (tk) { tk.hv.forEach(function (v) { if (v.length > 1) hts.push(v); }); });
+    if (!hts.length) return esc(text);
+    var fm = fold(text), f = fm.f, map = fm.map, ranges = [];
+    hts.forEach(function (v) {
+      var i = f.indexOf(v);
+      while (i >= 0) { ranges.push([map[i], map[i + v.length - 1] + 1]); i = f.indexOf(v, i + v.length); }
+    });
+    if (!ranges.length) return esc(text);
+    ranges.sort(function (a, b) { return a[0] - b[0]; });
+    var out = '', pos = 0;
+    ranges.forEach(function (r) {
+      if (r[1] <= pos) return;
+      var s = Math.max(r[0], pos);
+      out += esc(text.slice(pos, s)) + '<mark>' + esc(text.slice(s, r[1])) + '</mark>';
+      pos = r[1];
+    });
+    return out + esc(text.slice(pos));
+  }
+
+  function displayTitle(t) { return t && t.charAt(t.length - 1) === '.' && t.slice(-2) !== '..' ? t.slice(0, -1) : t; }
+
+  function fact(label, value, cls) {
+    return '<div' + (cls ? ' class="' + cls + '"' : '') + '><dt>' + label + '</dt><dd>' + value + '</dd></div>';
+  }
+
+  function itemHtml(it) {
+    var sig = it.signature || '–';
+    var facts = '';
+    if (it.location) facts += fact('Standort', esc(it.location), 'loc');
+    if (it.id) facts += fact('Medien-Nr.', esc(it.id), 'num');
+    if (it.publisher) facts += fact('Verlag', highlight(it.publisher));
+    if (it.year) facts += fact('Erschienen', esc(it.year), 'num');
+    if (it.pages) facts += fact('Seiten', esc(it.pages), 'num');
+    if (it.isbn) facts += fact('ISBN', esc(it.isbn), 'num');
+    if (it.language) facts += fact('Sprache', esc(it.language));
+    if (it.discs) facts += fact('Datenträger', esc(it.discs));
+    if (it.added) facts += fact('Zugang', esc(it.added));
+    return '<li class="item">' +
+      '<div class="spine' + (sig.length > 5 ? ' long' : '') + '" style="--tone:' + toneFor(it.signature) + '" title="Signatur ' + esc(sig) + '">' +
+        '<span class="sr">Signatur </span><span>' + esc(sig).replace(/_/g, '_<wbr>') + '</span></div>' +
+      '<div class="main"><div class="head"><div>' +
+        '<h2 class="title">' + highlight(displayTitle(it.title) || 'Ohne Titel') + '</h2>' +
+        (it.author ? '<p class="author">' + highlight(it.author) + '</p>' : '') +
+      '</div>' + (it.type ? '<span class="type">' + esc(it.type) + '</span>' : '') + '</div>' +
+      '<dl class="facts">' + facts + '</dl></div></li>';
+  }
+
+  function hasFilter() { return !!(state.q.trim() || state.art || state.ort || state.sig || state.mode !== 'all' || state.sort !== 'rel'); }
+
+  function render() {
+    var n = results.length, total = items.length;
+    var filtered = !!(state.q.trim() || state.art || state.ort || state.sig);
+    $('status').textContent = n === 0 ? 'Keine Treffer'
+      : filtered ? nf.format(n) + ' Treffer'
+      : nf.format(total) + ' Medien';
+    $('reset').hidden = !hasFilter();
+    var nActive = ['art', 'ort', 'sig'].filter(function (k) { return state[k]; }).length + (state.mode !== 'all') + (state.sort !== 'rel');
+    $('fcount').textContent = nActive ? nActive + ' aktiv' : '';
+
+    ['art', 'ort', 'sig', 'mode'].forEach(function (id) { $(id).classList.toggle('active', $(id).value !== (id === 'mode' ? 'all' : '')); });
+
+    var out = $('out');
+    if (n === 0) {
+      out.innerHTML = '<div class="empty"><h2>Nichts gefunden</h2>' +
+        '<p>Versuchen Sie weniger Wörter, zum Beispiel nur den Nachnamen der Autorin oder des Autors.</p>' +
+        '<p>Eine ISBN funktioniert mit und ohne Bindestriche. Prüfen Sie außerdem die Filter oben.</p></div>';
+    } else {
+      var html = '<ol class="results" aria-label="Trefferliste">';
+      for (var i = 0; i < Math.min(shown, n); i++) html += itemHtml(results[i]);
+      out.innerHTML = html + '</ol>';
+    }
+    var more = $('more');
+    if (n > shown) { more.hidden = false; more.textContent = 'Weitere ' + nf.format(Math.min(PAGE, n - shown)) + ' anzeigen (noch ' + nf.format(n - shown) + ')'; }
+    else more.hidden = true;
+  }
+
+  function update(resetPaging) {
+    if (resetPaging !== false) shown = PAGE;
+    compute();
+    render();
+    writeUrl();
+  }
+
+  /* ---------- Adresszeile: Suche lässt sich als Link weitergeben ---------- */
+  var KEYS = { q: 'q', mode: 'in', art: 'art', ort: 'ort', sig: 'sig', sort: 'sort' };
+  function writeUrl() {
+    var p = new URLSearchParams();
+    var defaults = { q: '', mode: 'all', art: '', ort: '', sig: '', sort: 'rel' };
+    Object.keys(KEYS).forEach(function (k) { if (state[k] !== defaults[k]) p.set(KEYS[k], state[k]); });
+    var qs = p.toString();
+    try { history.replaceState(null, '', location.pathname + (qs ? '?' + qs : '')); } catch (e) { /* z. B. bei file:// */ }
+  }
+  function readUrl() {
+    var p = new URLSearchParams(location.search);
+    Object.keys(KEYS).forEach(function (k) { var v = p.get(KEYS[k]); if (v !== null) state[k] = v; });
+    $('q').value = state.q;
+    ['mode', 'art', 'ort', 'sig', 'sort'].forEach(function (id) {
+      $(id).value = state[id];
+      if ($(id).value !== state[id]) { state[id] = id === 'mode' ? 'all' : id === 'sort' ? 'rel' : ''; $(id).value = state[id]; }
+    });
+  }
+
+  /* ---------- Bedienung ---------- */
+  var timer;
+  $('q').addEventListener('input', function () {
+    clearTimeout(timer);
+    var v = this.value;
+    timer = setTimeout(function () { state.q = v; update(); }, 120);
+  });
+  $('form').addEventListener('submit', function (e) { e.preventDefault(); clearTimeout(timer); state.q = $('q').value; update(); $('q').blur(); });
+  ['mode', 'art', 'ort', 'sig', 'sort'].forEach(function (id) {
+    $(id).addEventListener('change', function () { state[id] = this.value; update(); });
+  });
+  $('more').addEventListener('click', function () { shown += PAGE; render(); });
+  $('reset').addEventListener('click', function () {
+    state = { q: '', mode: 'all', art: '', ort: '', sig: '', sort: 'rel' };
+    $('q').value = '';
+    ['mode', 'art', 'ort', 'sig', 'sort'].forEach(function (id) { $(id).value = state[id]; });
+    update();
+    $('q').focus();
+  });
+
+  readUrl();
+  var fb = $('filterbox');
+  var wide = window.matchMedia('(min-width: 760px)').matches;
+  fb.open = wide || !!(state.art || state.ort || state.sig || state.mode !== 'all' || state.sort !== 'rel');
+  update();
+  if (window.matchMedia('(min-width: 760px) and (pointer: fine)').matches) $('q').focus();
+})();
+</script>
+</body>
+</html>

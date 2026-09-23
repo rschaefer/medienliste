@@ -1,0 +1,608 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Verwaltung – Medienliste Bücherei Hechendorf</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='6' y='6' width='52' height='52' rx='8' fill='%231B5E73'/%3E%3Crect x='11' y='11' width='42' height='42' rx='4' fill='none' stroke='%23fff' stroke-opacity='.6' stroke-width='2'/%3E%3Cpath d='M22 44V20h6v10l8-10h7l-9 11 10 13h-7l-9-12v12z' fill='%23fff'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --paper: #F2F4F1; --surface: #FFFFFF; --ink: #16262B; --ink-soft: #33464B; --muted: #566468;
+    --line: #D3DAD7; --lake: #1B5E73; --lake-dark: #144A5B; --lake-soft: #DDEBEF;
+    --warn-bg: #FFF1CC; --warn-ink: #5C4300; --err-bg: #FBE4E1; --err-ink: #8A1C10; --ok-bg: #DFF0E2; --ok-ink: #1F4D2B;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 1rem/1.5 var(--sans); }
+  [hidden] { display: none !important; }
+  .wrap { width: min(100% - 2rem, 46rem); margin-inline: auto; }
+  .top { border-bottom: 1px solid var(--line); background: var(--surface); }
+  .top .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: .25rem 1.5rem; padding-block: .75rem; width: min(100% - 2rem, 62rem); }
+  .brand { margin: 0; font: 600 1rem/1.2 var(--serif); color: var(--lake); }
+  a { color: var(--lake); text-underline-offset: 3px; }
+  h1 { margin: 2rem 0 .5rem; font: 600 clamp(2rem, 5.5vw, 2.8rem)/1.05 var(--serif); letter-spacing: -.015em; }
+  h2 { margin: 0 0 .6rem; font: 600 1.35rem/1.25 var(--serif); }
+  .lead { margin: 0 0 1.5rem; color: var(--ink-soft); }
+
+  .panel { margin: 0 0 1.25rem; padding: 1.25rem; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+  .panel p { margin: .4rem 0; }
+  .muted { color: var(--muted); font-size: .92rem; }
+
+  label { display: block; margin: .9rem 0 .25rem; font-size: .9rem; font-weight: 600; }
+  input[type=text], input[type=password] { width: 100%; min-height: 2.75rem; padding: .4rem .7rem; font: 1rem var(--sans); color: var(--ink); background: #fff; border: 1px solid #B9C3C0; border-radius: 8px; }
+  .check { display: flex; gap: .55rem; align-items: flex-start; margin: .9rem 0 0; font-weight: 400; }
+  .check input { margin-top: .3rem; width: 1.1rem; height: 1.1rem; }
+  :is(input, button, summary, .drop):focus-visible { outline: 3px solid var(--lake); outline-offset: 2px; }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 2.75rem; padding: .55rem 1.2rem; font: 600 1rem/1.2 var(--sans); color: #fff; background: var(--lake); border: 2px solid var(--lake); border-radius: 8px; cursor: pointer; text-decoration: none; }
+  .btn:hover { background: var(--lake-dark); border-color: var(--lake-dark); }
+  .btn.secondary { color: var(--lake); background: #fff; }
+  .btn.secondary:hover { background: var(--lake-soft); }
+  .btn.small { min-height: 2.25rem; padding: .3rem .8rem; font-size: .9rem; }
+  .btn:disabled { color: #6E7C80; background: #E6EAE8; border-color: #E6EAE8; cursor: not-allowed; }
+  .row { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1rem; align-items: center; }
+
+  .note { margin: .8rem 0 0; padding: .7rem .9rem; border-radius: 8px; background: var(--lake-soft); color: var(--ink); }
+  .note.warn { background: var(--warn-bg); color: var(--warn-ink); }
+  .note.err { background: var(--err-bg); color: var(--err-ink); }
+  .note.ok { background: var(--ok-bg); color: var(--ok-ink); }
+  .note p { margin: .2rem 0; }
+
+  details.help { margin-top: 1rem; }
+  details.help > summary, .lists summary { cursor: pointer; color: var(--lake); font-weight: 600; padding: .3rem 0; }
+  details.help ol { margin: .4rem 0 0; padding-left: 1.3rem; }
+  details.help li { margin: .3rem 0; }
+  code { padding: .05rem .3rem; background: #EEF2F0; border-radius: 4px; font-size: .9em; }
+
+  .drop { display: block; margin: .5rem 0 0; padding: 1.6rem 1rem; text-align: center; font-weight: 600; font-size: 1rem; color: var(--lake); background: var(--lake-soft); border: 2px dashed var(--lake); border-radius: 10px; cursor: pointer; }
+  .drop.over { background: #C9E0E6; }
+  .drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  .drop:focus-within { outline: 3px solid var(--lake); outline-offset: 2px; }
+
+  .stats { display: flex; flex-wrap: wrap; gap: .5rem 1.6rem; margin: .8rem 0; }
+  .stats div { min-width: 5rem; }
+  .stats dt { font-size: .8rem; color: var(--muted); }
+  .stats dd { margin: 0; font: 600 1.6rem/1.1 var(--serif); }
+  .stats { padding: 0; }
+  .lists ul { margin: .3rem 0 .6rem; padding-left: 1.2rem; font-size: .92rem; }
+  .lists li { margin: .15rem 0; overflow-wrap: anywhere; }
+
+  .versions { margin: .5rem 0 0; padding: 0; list-style: none; }
+  .versions li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .4rem 1rem; padding: .6rem 0; border-top: 1px solid var(--line); }
+  .versions li:first-child { border-top: 0; }
+  .versions .who { font-size: .92rem; }
+  .versions .when { font-weight: 600; }
+  .spinner { display: inline-block; width: .9rem; height: .9rem; margin-right: .5rem; vertical-align: -.1rem; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }
+  footer { margin: 2.5rem 0 2rem; font-size: .85rem; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <p class="brand">Bücherei Hechendorf</p>
+    <a href="index.html">Zur Suche</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1>Verwaltung</h1>
+  <p class="lead">Medienliste herunterladen, in Excel bearbeiten und wieder hochladen. Die Suchseite aktualisiert sich danach von selbst.</p>
+
+  <section class="panel" aria-labelledby="h-conn">
+    <h2 id="h-conn">Verbindung</h2>
+    <div id="connState"></div>
+    <details class="help" id="connDetails" open>
+      <summary id="connSummary">Verbindung einrichten</summary>
+      <div id="connForm">
+        <label for="repo">Repository (Benutzer/Name)</label>
+        <input id="repo" type="text" autocomplete="off" spellcheck="false" placeholder="benutzername/medienliste">
+        <label for="token">Zugriffsschlüssel</label>
+        <input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…">
+        <label for="name">Dein Name (erscheint im Änderungsverlauf)</label>
+        <input id="name" type="text" autocomplete="name" placeholder="z. B. Rita">
+        <label class="check"><input id="remember" type="checkbox" checked> <span>Auf diesem Gerät merken (nicht auf fremden oder gemeinsam genutzten Computern)</span></label>
+        <div class="row"><button type="button" class="btn" id="btnConnect">Verbinden</button></div>
+        <div id="connMsg" role="status" aria-live="polite"></div>
+      </div>
+      <details class="help">
+        <summary>Woher bekomme ich den Zugriffsschlüssel?</summary>
+        <p>Den Schlüssel gibt der Verwalter der Medienliste weiter (z. B. persönlich oder über einen Passwortmanager). Er wird nur einmal pro Gerät eingetragen.</p>
+        <p class="muted">Der Schlüssel gilt nur für dieses eine Repository und wird ausschließlich in diesem Browser gespeichert. Wer ihn kennt, kann die Liste ändern. Bitte nicht weitergeben und nicht per E-Mail oder Messenger verschicken.</p>
+      </details>
+      <details class="help">
+        <summary>Für den Verwalter: Schlüssel erstellen</summary>
+        <ol>
+          <li>Auf <a href="https://github.com/login" target="_blank" rel="noopener">github.com</a> mit dem Konto anmelden, dem das Repository gehört.</li>
+          <li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Neuen Schlüssel erstellen</a> (Fine-grained personal access token).</li>
+          <li>Name z. B. „Medienliste“, Ablauf in einem Jahr. Bei <em>Repository access</em> „Only select repositories“ wählen und das Repository der Medienliste auswählen.</li>
+          <li>Unter <em>Repository permissions</em> bei <em>Contents</em> die Stufe „Read and write“ wählen.</li>
+          <li>„Generate token“ anklicken und den Schlüssel kopieren (beginnt mit <code>github_pat_</code>). Er wird nur einmal angezeigt.</li>
+        </ol>
+        <p class="muted">Läuft der Schlüssel ab oder soll jemand keinen Zugriff mehr haben: unter <em>Settings → Developer settings → Fine-grained tokens</em> löschen und einen neuen erstellen.</p>
+      </details>
+    </details>
+  </section>
+
+  <section class="panel" aria-labelledby="h-cur">
+    <h2 id="h-cur">Aktuelle Liste</h2>
+    <div id="curInfo"><p class="muted">Bitte zuerst verbinden. Ohne Anmeldung lässt sich die aktuelle Liste trotzdem herunterladen.</p></div>
+    <div class="row">
+      <button type="button" class="btn" id="btnDownload" hidden>Excel herunterladen</button>
+      <a class="btn secondary" id="linkStatic" href="data/Medienliste.xlsx" download>Excel herunterladen (ohne Anmeldung)</a>
+      <a class="btn secondary" href="data/pruefbericht.html">Prüfbericht ansehen</a>
+    </div>
+    <div id="dlMsg" role="status" aria-live="polite"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-up">
+    <h2 id="h-up">Liste hochladen</h2>
+    <p class="muted">Vor dem Veröffentlichen wird die Datei geprüft und mit der Liste online verglichen. Spendernamen und persönliche Daten in den Dateieigenschaften werden automatisch entfernt.</p>
+    <label class="drop" id="drop" for="file">
+      <span id="dropText">Excel-Datei hier ablegen oder auswählen (.xlsx)</span>
+      <input id="file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+    </label>
+    <div id="preview" role="status" aria-live="polite"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-hist">
+    <h2 id="h-hist">Frühere Versionen</h2>
+    <p class="muted">Ist etwas schiefgegangen? Eine frühere Version herunterladen und erneut hochladen.</p>
+    <div id="hist"><p class="muted">Nach dem Verbinden sichtbar.</p></div>
+  </section>
+</main>
+
+<footer class="wrap"><p>Diese Seite spricht direkt mit GitHub. Die Excel-Datei wird nur im eigenen Browser geprüft.</p></footer>
+
+<script src="vendor/xlsx.mini.min.js"></script>
+<script src="vendor/jszip.min.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var FILE = 'data/Medienliste.xlsx';
+  var $ = function (id) { return document.getElementById(id); };
+  var nf = new Intl.NumberFormat('de-DE');
+  var S = { repo: '', token: '', name: '', connected: false, meta: null, versions: [], pending: null };
+
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function store(kind) { try { return window[kind]; } catch (e) { return null; } }
+  function lsGet(k) { var a = store('localStorage'), b = store('sessionStorage'); try { return (a && a.getItem(k)) || (b && b.getItem(k)) || ''; } catch (e) { return ''; } }
+  function lsSet(k, v, persist) { try { store(persist ? 'localStorage' : 'sessionStorage').setItem(k, v); store(persist ? 'sessionStorage' : 'localStorage').removeItem(k); } catch (e) { /* Speicher gesperrt */ } }
+  function lsDel(k) { try { store('localStorage').removeItem(k); store('sessionStorage').removeItem(k); } catch (e) { /* ignorieren */ } }
+  function fmtDate(iso) { var d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) + ' Uhr'; }
+  function note(el, kind, html) { el.innerHTML = html ? '<div class="note ' + kind + '">' + html + '</div>' : ''; }
+  function busy(text) { return '<span class="spinner" aria-hidden="true"></span>' + esc(text); }
+
+  /* ================================================================ GitHub */
+  function apiError(status, apiMsg) {
+    var msg;
+    if (status === 0) msg = 'Keine Verbindung zu GitHub. Bitte die Internetverbindung prüfen.';
+    else if (status === 401) msg = 'Der Zugriffsschlüssel ist ungültig oder abgelaufen. Bitte unter „Verbindung“ einen neuen eintragen.';
+    else if (status === 403) msg = /rate limit/i.test(apiMsg || '') ? 'GitHub bremst gerade wegen zu vieler Anfragen. Bitte in ein paar Minuten erneut versuchen.' : 'Keine Berechtigung. Der Schlüssel braucht für dieses Repository „Contents: Read and write“.';
+    else if (status === 404) msg = 'Nicht gefunden. Bitte Repository-Namen und Schlüssel prüfen (der Schlüssel muss für genau dieses Repository ausgestellt sein).';
+    else if (status === 409 || status === 422) msg = 'Die Liste wurde in der Zwischenzeit von jemand anderem geändert. Bitte die Datei erneut auswählen.';
+    else msg = 'GitHub meldet einen Fehler (' + status + '): ' + (apiMsg || 'unbekannt');
+    var e = new Error(msg); e.status = status; return e;
+  }
+
+  function gh(path, opt) {
+    opt = opt || {};
+    var headers = { 'Accept': 'application/vnd.github+json' };
+    if (S.token) headers.Authorization = 'Bearer ' + S.token;
+    if (opt.body) headers['Content-Type'] = 'application/json';
+    return fetch('https://api.github.com' + path, { method: opt.method || 'GET', headers: headers, body: opt.body ? JSON.stringify(opt.body) : undefined, cache: 'no-store' })
+      .catch(function () { throw apiError(0); })
+      .then(function (r) {
+        if (r.ok) return r.json();
+        return r.json().catch(function () { return {}; }).then(function (j) { throw apiError(r.status, j.message); });
+      });
+  }
+
+  function getMeta(ref) {
+    return gh('/repos/' + S.repo + '/contents/' + FILE + (ref ? '?ref=' + encodeURIComponent(ref) : '')).catch(function (e) { if (e.status === 404) return null; throw e; });
+  }
+  function b64ToBytes(b64) { var bin = atob(b64.replace(/\s/g, '')), u = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
+  function bytesToB64(u) { var s = '', n = 0x8000; for (var i = 0; i < u.length; i += n) s += String.fromCharCode.apply(null, u.subarray(i, i + n)); return btoa(s); }
+  function fileBytes(meta) {
+    if (meta.content && meta.encoding === 'base64') return Promise.resolve(b64ToBytes(meta.content));
+    return gh('/repos/' + S.repo + '/git/blobs/' + meta.sha).then(function (b) { return b64ToBytes(b.content); });
+  }
+  function saveBytes(u8, filename) {
+    var blob = new Blob([u8], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+  }
+  function today() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+
+  /* ================================================================ Bereinigung der Excel-Datei */
+  var SI_RE = /<si\b[^>]*?(?:\/>|>[\s\S]*?<\/si>)/g;
+  function xmlText(s) { return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&#(\d+);/g, function (m, n) { return String.fromCharCode(+n); }).replace(/&amp;/g, '&'); }
+  function siText(si) { var t = '', re = /<t\b[^>]*>([\s\S]*?)<\/t>/g, m; si = si.replace(/<rPh\b[\s\S]*?<\/rPh>/g, ''); while ((m = re.exec(si))) t += m[1]; return xmlText(t); }
+  function attr(tag, name) { var m = new RegExp('(?:^|\\s)' + name + '="([^"]*)"').exec(tag); return m ? m[1] : null; }
+  var TEAM = 'Büchereiteam';
+  var NOFOLDERS = { createFolders: false };
+
+  /* Entfernt Spendernamen (Spalte "Spende" -> nur noch "x") und persönliche Daten aus den Dateieigenschaften.
+     Alles andere in der Datei bleibt unverändert (Formeln, Formatierung, weitere Blätter). */
+  function sanitizeXlsx(u8) {
+    return JSZip.loadAsync(u8, { createFolders: false }).catch(function () { throw new Error('Das ist keine gültige Excel-Datei (.xlsx). Bitte die Datei in Excel öffnen und als „Excel-Arbeitsmappe (.xlsx)“ speichern.'); }).then(function (zip) {
+      var rd = function (p) { var f = zip.file(p); return f ? f.async('string') : Promise.resolve(null); };
+      var info = { donorCells: 0, metadata: false };
+      return Promise.all([rd('xl/workbook.xml'), rd('xl/_rels/workbook.xml.rels')]).then(function (wr) {
+        var wbXml = wr[0], relXml = wr[1];
+        if (!wbXml || !relXml) throw new Error('Das ist keine gültige Excel-Datei (.xlsx).');
+        var rels = {}, ssPath = 'xl/sharedStrings.xml';
+        (relXml.match(/<Relationship\b[^>]*>/g) || []).forEach(function (t) {
+          var id = attr(t, 'Id'), target = attr(t, 'Target'), type = attr(t, 'Type') || '';
+          if (!id || !target) return;
+          var p = target.charAt(0) === '/' ? target.slice(1) : 'xl/' + target;
+          rels[id] = p;
+          if (/sharedStrings$/.test(type)) ssPath = p;
+        });
+        var sheetPaths = [];
+        (wbXml.match(/<sheet\b[^>]*>/g) || []).forEach(function (t) { var rid = attr(t, 'r:id'); if (rid && rels[rid]) sheetPaths.push(rels[rid]); });
+
+        return Promise.all([rd(ssPath)].concat(sheetPaths.map(rd))).then(function (arr) {
+          var ssXml = arr[0], sheets = arr.slice(1), changed = {};
+          var strings = ssXml ? (ssXml.match(SI_RE) || []).map(siText) : [];
+          var xIdx = -1;
+          strings.forEach(function (s, i) { if (xIdx < 0 && s.trim().toLowerCase() === 'x') xIdx = i; });
+          var donorIdx = {};
+
+          sheets.forEach(function (xml, si) {
+            if (!xml) return;
+            // Spalte "Spende" in Zeile 1 suchen
+            var col = null, row1 = /<row\b[^>]*\br="1"[^>]*>([\s\S]*?)<\/row>/.exec(xml);
+            if (row1) {
+              var m, hre = /<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g;
+              while ((m = hre.exec(row1[1])) && !col) {
+                var ref = attr(m[1], 'r'), t = attr(m[1], 't'), v = m[2] || '', txt = '';
+                if (t === 's') { var vm = /<v>(\d+)<\/v>/.exec(v); if (vm) txt = strings[+vm[1]] || ''; }
+                else if (t === 'inlineStr') txt = siText(v);
+                if (ref && txt.trim().toLowerCase() === 'spende') col = ref.replace(/\d+$/, '');
+              }
+            }
+            if (!col) return;
+            var cre = new RegExp('<c\\b([^>]*?\\br="' + col + '(\\d+)"[^>]*?)(\\/>|>([\\s\\S]*?)<\\/c>)', 'g');
+            var out = xml.replace(cre, function (all, attrs, row, tail, inner) {
+              if (row === '1' || !inner) return all;
+              var t = attr(attrs, 't');
+              if (t === 's') {
+                var vm = /<v>(\d+)<\/v>/.exec(inner); if (!vm) return all;
+                var s = (strings[+vm[1]] || '').trim();
+                if (!s || s.toLowerCase() === 'x') return all;
+                if (xIdx < 0) { xIdx = strings.length; strings.push('x'); ssXml = ssXml.replace(/<\/sst>\s*$/, '<si><t>x</t></si></sst>'); changed[ssPath] = true; }
+                donorIdx[vm[1]] = true; info.donorCells++;
+                return '<c' + attrs + '>' + inner.replace(/<v>\d+<\/v>/, '<v>' + xIdx + '</v>') + '</c>';
+              }
+              if (t === 'inlineStr') {
+                var s2 = siText(inner).trim();
+                if (!s2 || s2.toLowerCase() === 'x') return all;
+                info.donorCells++;
+                return '<c' + attrs + '>' + inner.replace(/<is>[\s\S]*?<\/is>/, '<is><t>x</t></is>') + '</c>';
+              }
+              return all;
+            });
+            if (out !== xml) { sheets[si] = out; zip.file(sheetPaths[si], out, NOFOLDERS); }
+          });
+
+          // Namen aus der gemeinsamen Textliste entfernen, wenn sie sonst nirgends mehr verwendet werden
+          var donorKeys = Object.keys(donorIdx);
+          if (donorKeys.length && ssXml) {
+            var used = {};
+            sheets.forEach(function (xml) { if (!xml) return; var re = /<c\b[^>]*\bt="s"[^>]*>\s*<v>(\d+)<\/v>/g, m2; while ((m2 = re.exec(xml))) used[m2[1]] = true; });
+            var blank = {}; donorKeys.forEach(function (k) { if (!used[k]) blank[k] = true; });
+            var i = 0;
+            ssXml = ssXml.replace(SI_RE, function (mm) { return blank[i++] ? '<si><t></t></si>' : mm; });
+            changed[ssPath] = true;
+          }
+          if (changed[ssPath]) zip.file(ssPath, ssXml, NOFOLDERS);
+
+          // Persönliche Daten in den Dateieigenschaften
+          var metaFiles = ['docProps/core.xml', 'docProps/app.xml', 'xl/workbook.xml'];
+          zip.forEach(function (p) { if (/^xl\/persons\/[^/]+\.xml$/.test(p) || /^xl\/comments\d*\.xml$/.test(p)) metaFiles.push(p); });
+          return Promise.all(metaFiles.map(function (p) { return rd(p).then(function (x) { return [p, x]; }); })).then(function (list) {
+            list.forEach(function (pair) {
+              var p = pair[0], x = pair[1];
+              if (!x) return;
+              var y = x;
+              if (p === 'docProps/core.xml') {
+                y = y.replace(/(<dc:creator>)[\s\S]*?(<\/dc:creator>)/, '$1' + TEAM + '$2').replace(/(<cp:lastModifiedBy>)[\s\S]*?(<\/cp:lastModifiedBy>)/, '$1' + TEAM + '$2');
+              } else if (p === 'docProps/app.xml') {
+                y = y.replace(/<Company>[\s\S]*?<\/Company>|<Company\/>/, '').replace(/<Manager>[\s\S]*?<\/Manager>|<Manager\/>/, '');
+              } else if (p === 'xl/workbook.xml') {
+                y = y.replace(/<mc:AlternateContent\b[^>]*>\s*<mc:Choice\b[^>]*>\s*<x15ac:absPath\b[^>]*\/>\s*<\/mc:Choice>\s*<\/mc:AlternateContent>/g, '')
+                     .replace(/(<x15ac:absPath\b[^>]*\burl=")[^"]*(")/g, '$1$2');
+              } else if (/persons/.test(p)) {
+                y = y.replace(/displayName="[^"]*"/g, 'displayName="' + TEAM + '"').replace(/userId="[^"]*"/g, 'userId="' + TEAM + '"').replace(/providerId="[^"]*"/g, 'providerId="None"');
+              } else {
+                y = y.replace(/<author>([\s\S]*?)<\/author>/g, function (a, n) { return /^tc=/.test(n) ? a : '<author>' + TEAM + '</author>'; });
+              }
+              if (y !== x) { zip.file(p, y, NOFOLDERS); info.metadata = true; }
+            });
+            if (!info.donorCells && !info.metadata) return { bytes: u8, info: info };
+            return zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE', compressionOptions: { level: 6 } }).then(function (bytes) { return { bytes: bytes, info: info }; });
+          });
+        });
+      });
+    });
+  }
+
+  /* ================================================================ Inhalt lesen und vergleichen */
+  var FIELD = { 'autoren': 'author', 'titel': 'title', 'medien-nr.': 'id', 'signatur': 'signature', 'publikationsdatum': 'year', 'verlag': 'publisher', 'seiten': 'pages', 'isbn': 'isbn', 'standort': 'location', 'anzahl cd': 'discs', 'medienart': 'type', 'sprache': 'language', 'zugang': 'added' };
+  var CMP = ['title', 'author', 'signature', 'year', 'publisher', 'pages', 'isbn', 'location', 'discs', 'type', 'language', 'added'];
+  function cellText(v) {
+    if (v === null || v === undefined) return '';
+    if (v instanceof Date) return isNaN(v) ? '' : v.toISOString().slice(0, 10);
+    if (typeof v === 'number' && isFinite(v) && Math.floor(v) === v) return String(v);
+    return String(v).replace(/\s+/g, ' ').trim();
+  }
+
+  function readRows(u8) {
+    var wb;
+    try { wb = XLSX.read(u8, { type: 'array', cellDates: true }); }
+    catch (e) { throw new Error('Die Datei konnte nicht gelesen werden. Ist es eine Excel-Datei (.xlsx)?'); }
+    var all = [], perSheet = [], idCount = {};
+    wb.SheetNames.forEach(function (name) {
+      var aoa = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: null, raw: true, blankrows: false });
+      if (!aoa.length) return;
+      var col = {};
+      aoa[0].forEach(function (h, i) { var f = FIELD[String(h == null ? '' : h).trim().toLowerCase()]; if (f && !(f in col)) col[f] = i; });
+      if (col.title === undefined || col.author === undefined) return;
+      var n = 0;
+      for (var r = 1; r < aoa.length; r++) {
+        var row = aoa[r], o = {};
+        Object.keys(col).forEach(function (f) { o[f] = cellText(row[col[f]]); });
+        if (!o.title && !o.author) continue;
+        if (o.id) idCount[o.id] = (idCount[o.id] || 0) + 1;
+        all.push(o); n++;
+      }
+      perSheet.push({ name: name, count: n });
+    });
+    // Schlüssel je Eintrag: die Medien-Nr. Ist sie mehrfach vergeben, zusätzlich ISBN bzw. Titel.
+    var recs = [], seen = {}, dupIds = 0;
+    Object.keys(idCount).forEach(function (k) { if (idCount[k] > 1) dupIds++; });
+    all.forEach(function (o) {
+      var key = o.id ? 'nr:' + o.id + (idCount[o.id] > 1 ? '|' + (o.isbn.replace(/[^0-9X]/gi, '') || o.title.toLowerCase()) : '')
+        : o.isbn ? 'isbn:' + o.isbn.replace(/[^0-9X]/gi, '') : 'titel:' + (o.title + '|' + o.author).toLowerCase();
+      if (seen[key] !== undefined) { seen[key]++; key += '#' + seen[key]; } else seen[key] = 0;
+      recs.push({ key: key, id: o.id, sig: JSON.stringify(CMP.map(function (f) { return o[f] || ''; })), label: (o.title || 'Ohne Titel').slice(0, 80) + (o.id ? ' (Nr. ' + o.id + ')' : '') });
+    });
+    if (!recs.length) throw new Error('In der Datei wurde keine Medienliste erkannt. Erwartet werden Blätter mit den Spalten „Autoren“ und „Titel“ in der ersten Zeile.');
+    return { recs: recs, sheets: perSheet, dupIds: dupIds };
+  }
+
+  function diff(oldR, newR) {
+    var om = {}, used = {}, leftNew = [], byId = {}, matched = {}, d = { added: [], removed: [], changed: [], same: 0 };
+    oldR.recs.forEach(function (r) { om[r.key] = r; });
+    // 1. gleiche Schlüssel (Medien-Nr., bei Doppelnummern zusätzlich ISBN/Titel)
+    newR.recs.forEach(function (r) {
+      var o = om[r.key];
+      if (!o) return leftNew.push(r);
+      used[r.key] = true;
+      if (o.sig !== r.sig) d.changed.push(r.label); else d.same++;
+    });
+    var leftOld = oldR.recs.filter(function (r) { return !used[r.key]; });
+    // 2. Rest: dieselbe Medien-Nr. gilt als dasselbe Medium
+    leftOld.forEach(function (r) { if (r.id) (byId[r.id] = byId[r.id] || []).push(r); });
+    leftNew.forEach(function (r) {
+      var list = r.id && byId[r.id];
+      if (list && list.length) { var o = list.shift(); matched[o.key] = true; if (o.sig !== r.sig) d.changed.push(r.label); else d.same++; }
+      else d.added.push(r.label);
+    });
+    leftOld.forEach(function (r) { if (!matched[r.key]) d.removed.push(r.label); });
+    return d;
+  }
+  function listHtml(title, arr, cls) {
+    if (!arr.length) return '';
+    var show = arr.slice(0, 15).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('');
+    return '<details><summary>' + esc(title) + ' anzeigen (' + nf.format(arr.length) + ')</summary><ul>' + show + (arr.length > 15 ? '<li>… und ' + nf.format(arr.length - 15) + ' weitere</li>' : '') + '</ul></details>';
+  }
+
+  /* ================================================================ Verbindung */
+  function loadSettings() {
+    var detected = '', m = location.hostname.match(/^([^.]+)\.github\.io$/);
+    if (m) { var seg = location.pathname.split('/').filter(Boolean)[0]; detected = (seg && !/\.html?$/.test(seg)) ? m[1] + '/' + seg : m[1] + '/' + m[1] + '.github.io'; }
+    $('repo').value = lsGet('medien.repo') || detected;
+    $('token').value = lsGet('medien.token');
+    $('name').value = lsGet('medien.name');
+  }
+
+  function renderConn() {
+    if (S.connected) {
+      $('connState').innerHTML = '<div class="note ok"><p><strong>Verbunden</strong> mit ' + esc(S.repo) + (S.name ? ' als ' + esc(S.name) : '') + '. Schreibzugriff ist möglich.</p><p><button type="button" class="btn secondary small" id="btnLogout">Abmelden</button></p></div>';
+      $('connSummary').textContent = 'Verbindung ändern';
+      $('connDetails').open = false;
+      $('btnDownload').hidden = false;
+      $('linkStatic').classList.add('secondary');
+    } else {
+      $('connState').innerHTML = '';
+      $('connSummary').textContent = 'Verbindung einrichten';
+      $('connDetails').open = true;
+      $('btnDownload').hidden = true;
+    }
+  }
+
+  function connect() {
+    var repo = $('repo').value.trim().replace(/^https?:\/\/github\.com\//, '').replace(/\/+$/, ''), token = $('token').value.trim(), name = $('name').value.trim();
+    var msg = $('connMsg');
+    if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) return note(msg, 'err', 'Bitte das Repository im Format <code>benutzername/name</code> eintragen.');
+    if (!token) return note(msg, 'err', 'Bitte den Zugriffsschlüssel eintragen.');
+    if (!name) return note(msg, 'err', 'Bitte den eigenen Namen eintragen. Er erscheint im Änderungsverlauf.');
+    S.repo = repo; S.token = token; S.name = name;
+    note(msg, 'info', busy('Verbindung wird geprüft …'));
+    return gh('/repos/' + repo).then(function (r) {
+      if (!r.permissions || !r.permissions.push) throw new Error('Der Schlüssel darf in diesem Repository nicht schreiben. Er braucht „Contents: Read and write“.');
+      var remember = $('remember').checked;
+      lsSet('medien.repo', repo, true); lsSet('medien.name', name, true); lsSet('medien.token', token, remember);
+      S.connected = true; note(msg, '', '');
+      renderConn();
+      return refresh();
+    }).catch(function (e) {
+      S.connected = false; S.token = '';
+      note(msg, 'err', esc(e.message));
+    });
+  }
+
+  /* ================================================================ Aktuelle Liste und Verlauf */
+  function refresh() {
+    note($('dlMsg'), '', '');
+    return Promise.all([getMeta(), gh('/repos/' + S.repo + '/commits?path=' + encodeURIComponent(FILE) + '&per_page=10')]).then(function (res) {
+      S.meta = res[0]; S.versions = res[1] || [];
+      renderCurrent(); renderHistory();
+    }).catch(function (e) { note($('curInfo'), 'err', esc(e.message)); });
+  }
+  function who(c) {
+    var m = /von ([^:(]+?)(?::|\(|$)/.exec(c.commit.message.split('\n')[0]);
+    return m ? m[1].trim() : (c.commit.author && c.commit.author.name) || 'unbekannt';
+  }
+  function renderCurrent() {
+    if (!S.meta) { $('curInfo').innerHTML = '<p>Noch keine Liste online. Die erste Liste kann unten hochgeladen werden.</p>'; $('btnDownload').disabled = true; return; }
+    $('btnDownload').disabled = false;
+    var v = S.versions[0];
+    $('curInfo').innerHTML = v
+      ? '<p>Zuletzt geändert am <strong>' + esc(fmtDate(v.commit.author.date)) + '</strong> von <strong>' + esc(who(v)) + '</strong>.</p><p class="muted">' + nf.format(Math.round(S.meta.size / 1024)) + ' KB</p>'
+      : '<p>Die Liste ist online.</p>';
+  }
+  function renderHistory() {
+    if (!S.versions.length) { $('hist').innerHTML = '<p class="muted">Noch keine Versionen.</p>'; return; }
+    $('hist').innerHTML = '<ul class="versions">' + S.versions.map(function (c, i) {
+      return '<li><div><div class="when">' + esc(fmtDate(c.commit.author.date)) + (i === 0 ? ' (aktuell)' : '') + '</div><div class="who">' + esc(who(c)) + '</div></div>' +
+        '<button type="button" class="btn secondary small" data-sha="' + esc(c.sha) + '" data-date="' + esc(c.commit.author.date.slice(0, 10)) + '">Herunterladen</button></li>';
+    }).join('') + '</ul>';
+  }
+
+  function download(ref, dateStr, isCurrent) {
+    var msg = $('dlMsg');
+    note(msg, 'info', busy('Wird geladen …'));
+    return getMeta(ref).then(function (meta) {
+      if (!meta) throw new Error('Datei nicht gefunden.');
+      return fileBytes(meta).then(function (u8) {
+        saveBytes(u8, 'Medienliste_' + (dateStr || today()) + '.xlsx');
+        if (isCurrent) lsSet('medien.lastDownload', JSON.stringify({ sha: meta.sha, at: new Date().toISOString() }), true);
+        note(msg, 'ok', 'Heruntergeladen. Nach dem Bearbeiten bitte unten wieder hochladen.');
+      });
+    }).catch(function (e) { note(msg, 'err', esc(e.message)); });
+  }
+
+  /* ================================================================ Hochladen */
+  function handleFile(file) {
+    var pv = $('preview');
+    S.pending = null;
+    if (!S.connected) return note(pv, 'warn', 'Bitte zuerst oben verbinden.');
+    if (!/\.xlsx$/i.test(file.name)) return note(pv, 'err', 'Bitte eine Excel-Datei mit der Endung <code>.xlsx</code> wählen.');
+    note(pv, 'info', busy('Datei wird geprüft …'));
+    var cleaned, parsed, current;
+    return file.arrayBuffer().then(function (buf) { return sanitizeXlsx(new Uint8Array(buf)); }).then(function (c) {
+      cleaned = c; parsed = readRows(c.bytes);
+      return getMeta();
+    }).then(function (meta) {
+      current = { meta: meta, rows: null };
+      if (!meta) return null;
+      return fileBytes(meta).then(function (u8) { current.rows = readRows(u8); });
+    }).then(function () {
+      var d = current.rows ? diff(current.rows, parsed) : { added: parsed.recs.map(function (r) { return r.label; }), removed: [], changed: [], same: 0 };
+      var warnings = [];
+      if (current.rows && d.removed.length >= 10 && d.removed.length > current.rows.recs.length * 0.1) {
+        warnings.push('Es würden <strong>' + nf.format(d.removed.length) + ' Medien</strong> aus der Liste verschwinden. Das passiert oft, wenn eine ältere Version bearbeitet wurde.');
+      }
+      var last; try { last = JSON.parse(lsGet('medien.lastDownload') || 'null'); } catch (e) { last = null; }
+      if (current.meta && last && last.sha && last.sha !== current.meta.sha && S.versions[0]) {
+        warnings.push('Die Liste online wurde am <strong>' + esc(fmtDate(S.versions[0].commit.author.date)) + '</strong> von <strong>' + esc(who(S.versions[0])) + '</strong> geändert, nachdem du sie heruntergeladen hast. Diese Änderungen sind in deiner Datei vermutlich nicht enthalten und gehen beim Veröffentlichen verloren (siehe „Entfernt“ und „Geändert“).');
+      }
+      var noChange = current.rows && !d.added.length && !d.removed.length && !d.changed.length;
+      S.pending = { bytes: cleaned.bytes, baseSha: current.meta ? current.meta.sha : null, d: d, filename: file.name };
+
+      var h = '<h3 style="margin:1rem 0 .2rem;font:600 1.1rem var(--serif)">Vorschau: ' + esc(file.name) + '</h3>';
+      h += '<p>' + nf.format(parsed.recs.length) + ' Medien erkannt' + (parsed.sheets.length > 1 ? ' (' + parsed.sheets.map(function (s) { return esc(s.name) + ': ' + nf.format(s.count); }).join(', ') + ')' : '') + '.</p>';
+      if (cleaned.info.donorCells || cleaned.info.metadata) {
+        h += '<div class="note ok"><p><strong>Automatisch bereinigt:</strong>' +
+          (cleaned.info.donorCells ? ' In der Spalte „Spende“ wurden ' + nf.format(cleaned.info.donorCells) + ' Namen durch „x“ ersetzt.' : '') +
+          (cleaned.info.metadata ? ' Persönliche Daten in den Dateieigenschaften (Autor, Bearbeiter, Pfade) wurden entfernt.' : '') + '</p></div>';
+      }
+      if (parsed.dupIds) h += '<div class="note"><p>Hinweis: ' + nf.format(parsed.dupIds) + ' Medien-Nr. kommen mehrfach vor. Das verhindert das Veröffentlichen nicht. Der Prüfbericht zeigt die Zeilen.</p></div>';
+      h += '<dl class="stats"><div><dt>Neu</dt><dd>' + nf.format(d.added.length) + '</dd></div><div><dt>Entfernt</dt><dd>' + nf.format(d.removed.length) + '</dd></div><div><dt>Geändert</dt><dd>' + nf.format(d.changed.length) + '</dd></div><div><dt>Unverändert</dt><dd>' + nf.format(d.same) + '</dd></div></dl>';
+      h += '<div class="lists">' + listHtml('Neue Medien', d.added) + listHtml('Entfernte Medien', d.removed) + listHtml('Geänderte Medien', d.changed) + '</div>';
+      if (!current.meta) h += '<div class="note"><p>Es ist noch keine Liste online. Dies wird die erste Version.</p></div>';
+      warnings.forEach(function (w) { h += '<div class="note warn"><p>' + w + '</p></div>'; });
+      if (warnings.length) h += '<label class="check"><input type="checkbox" id="ack"> <span>Ich habe die Warnung gelesen und möchte trotzdem veröffentlichen.</span></label>';
+      if (noChange) h += '<div class="note"><p><strong>Keine inhaltlichen Änderungen</strong> gegenüber der Liste online. Es gibt nichts zu veröffentlichen.</p></div>';
+      h += '<div class="row"><button type="button" class="btn" id="btnPublish"' + (noChange || warnings.length ? ' disabled' : '') + '>Jetzt veröffentlichen</button><button type="button" class="btn secondary" id="btnCancel">Abbrechen</button></div><div id="pubMsg" role="status" aria-live="polite"></div>';
+      pv.innerHTML = h;
+      var ack = $('ack');
+      if (ack) ack.addEventListener('change', function () { $('btnPublish').disabled = !ack.checked; });
+      $('btnCancel').addEventListener('click', function () { S.pending = null; pv.innerHTML = ''; $('file').value = ''; });
+      $('btnPublish').addEventListener('click', publish);
+    }).catch(function (e) { S.pending = null; note(pv, 'err', esc(e.message)); });
+  }
+
+  function publish() {
+    var p = S.pending; if (!p) return;
+    var msg = $('pubMsg'), btn = $('btnPublish');
+    btn.disabled = true; $('btnCancel').disabled = true;
+    note(msg, 'info', busy('Wird hochgeladen …'));
+    getMeta().then(function (meta) {
+      var sha = meta ? meta.sha : null;
+      if (sha !== p.baseSha) throw apiError(409);
+      var text = 'Medienliste aktualisiert von ' + S.name + ': ' + p.d.added.length + ' neu, ' + p.d.removed.length + ' entfernt, ' + p.d.changed.length + ' geändert';
+      var body = { message: text, content: bytesToB64(p.bytes) };
+      if (sha) body.sha = sha;
+      return gh('/repos/' + S.repo + '/contents/' + FILE, { method: 'PUT', body: body });
+    }).then(function (res) {
+      lsSet('medien.lastDownload', JSON.stringify({ sha: res.content.sha, at: new Date().toISOString() }), true);
+      S.pending = null;
+      note(msg, 'ok', '<p><strong>Hochgeladen.</strong> Die Suchseite wird jetzt neu erstellt.</p><p id="track">' + busy('Warte auf GitHub …') + '</p>');
+      $('btnPublish').hidden = true; $('btnCancel').textContent = 'Schließen';
+      $('btnCancel').disabled = false;
+      $('file').value = '';
+      track(res.commit.sha, 0);
+      return refresh();
+    }).catch(function (e) { note(msg, 'err', esc(e.message)); btn.disabled = false; $('btnCancel').disabled = false; });
+  }
+
+  function track(sha, n) {
+    var el = $('track'); if (!el) return;
+    gh('/repos/' + S.repo + '/actions/runs?head_sha=' + sha + '&per_page=5').then(function (r) {
+      var run = (r.workflow_runs || [])[0];
+      if (!run) { if (n > 45) { el.textContent = 'Der Status ist nicht abrufbar. Die Suchseite aktualisiert sich trotzdem in wenigen Minuten.'; return; } el.innerHTML = busy('Warte auf GitHub …'); return setTimeout(function () { track(sha, n + 1); }, 4000); }
+      if (run.status !== 'completed') { el.innerHTML = busy('Liste wird geprüft und veröffentlicht …'); return setTimeout(function () { track(sha, n + 1); }, 4000); }
+      if (run.conclusion === 'success') el.innerHTML = 'Fertig. Die Suchseite zeigt die neue Liste (durch Zwischenspeicher kann es bis zu 10 Minuten dauern). <a href="index.html">Zur Suche</a> · <a href="data/pruefbericht.html">Prüfbericht</a>';
+      else { el.parentNode.className = 'note err'; el.innerHTML = '<strong>Veröffentlichung fehlgeschlagen.</strong> Die bisherige Suchseite bleibt unverändert online. <a href="' + esc(run.html_url) + '" target="_blank" rel="noopener">Details bei GitHub ansehen</a>'; }
+    }).catch(function () { el.textContent = 'Der Status ist nicht abrufbar. Die Suchseite aktualisiert sich trotzdem in wenigen Minuten.'; });
+  }
+
+  /* ================================================================ Bedienung */
+  $('btnConnect').addEventListener('click', connect);
+  ['repo', 'token', 'name'].forEach(function (id) { $(id).addEventListener('keydown', function (e) { if (e.key === 'Enter') connect(); }); });
+  $('connState').addEventListener('click', function (e) {
+    if (!e.target.closest('#btnLogout')) return;
+    lsDel('medien.token'); S.connected = false; S.token = ''; S.meta = null; S.versions = []; $('token').value = '';
+    renderConn();
+    $('curInfo').innerHTML = '<p class="muted">Bitte zuerst verbinden. Ohne Anmeldung lässt sich die aktuelle Liste trotzdem herunterladen.</p>';
+    $('hist').innerHTML = '<p class="muted">Nach dem Verbinden sichtbar.</p>'; $('preview').innerHTML = '';
+  });
+  $('btnDownload').addEventListener('click', function () { download(null, today(), true); });
+  $('hist').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-sha]'); if (!b) return;
+    download(b.getAttribute('data-sha'), b.getAttribute('data-date'), false);
+  });
+  $('file').addEventListener('change', function () { if (this.files[0]) handleFile(this.files[0]); });
+  var drop = $('drop');
+  ['dragenter', 'dragover'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
+  ['dragleave', 'drop'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
+  drop.addEventListener('drop', function (e) { var f = e.dataTransfer.files[0]; if (f) handleFile(f); });
+
+  loadSettings();
+  renderConn();
+  if ($('repo').value && $('token').value && $('name').value) connect();
+})();
+</script>
+</body>
+</html>
