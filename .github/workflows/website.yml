@@ -1,0 +1,66 @@
+# Baut die Webseite neu, sobald die Excel-Liste oder eine Seite geändert wird,
+# und veröffentlicht sie auf GitHub Pages.
+name: Website aktualisieren
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "data/Medienliste.xlsx"
+      - "index.html"
+      - "verwaltung.html"
+      - "vendor/**"
+      - "tools/**"
+      - ".github/workflows/website.yml"
+  workflow_dispatch: # manuell startbar: Reiter "Actions" -> "Run workflow"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Immer nur eine Veröffentlichung gleichzeitig; eine laufende wird nicht abgebrochen.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Werkzeug installieren
+        run: pip install openpyxl
+
+      - name: Excel prüfen und Daten erzeugen
+        # --strict: bricht ab, wenn in der Spalte "Spende" Namen stehen. Dann bleibt die bisherige Seite online.
+        run: |
+          mkdir -p _site/data
+          python tools/convert.py data/Medienliste.xlsx _site/data --strict
+          cp data/Medienliste.xlsx _site/data/Medienliste.xlsx
+          cp index.html verwaltung.html _site/
+          cp -r vendor _site/vendor
+
+      - name: Prüfbericht in der Zusammenfassung anzeigen
+        run: cat _site/data/pruefbericht.md >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
