@@ -1,6 +1,6 @@
 # Anleitung für das Büchereiteam
 
-Die Medienliste wird über eine Seite verwaltet: `https://<benutzer>.github.io/<repository>/verwaltung.html`
+Die Medienliste wird über eine Seite verwaltet: `https://rschaefer.github.io/medienliste/verwaltung.html`
 
 ## Einmalig pro Gerät
 
