@@ -3,8 +3,8 @@
 Suchseite für die Medienliste (Titel, Autor, ISBN, Medienart) mit Verwaltungsseite zum Aktualisieren der Excel-Liste.
 Läuft komplett auf GitHub Pages, ohne eigenen Server.
 
-- **Suche:** `https://<benutzer>.github.io/<repository>/`
-- **Verwaltung (Büchereiteam):** `https://<benutzer>.github.io/<repository>/verwaltung.html`
+- **Suche:** `https://rschaefer.github.io/medienliste/`
+- **Verwaltung (Büchereiteam):** `https://rschaefer.github.io/medienliste/verwaltung.html`
 - **Prüfbericht** (Auffälligkeiten in der Excel): `.../data/pruefbericht.html`
 
 Die Anleitung für das Team steht in [`ANLEITUNG.md`](ANLEITUNG.md).
