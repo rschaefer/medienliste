@@ -187,8 +187,8 @@
      Hier lassen sich die Farben an die echten Aufkleber angleichen.
   ------------------------------------------------------------------ */
   var SIGNATUR_FARBEN = {
-    'K': '#FFF536', 'KK': '#FFF536', 'KE': '#FFF536', 'J': '#3BCC1D',
-    'SL': '#3BCC1D', 'KSach': '#FFF536', 'Sach': '#2498FF', 'MSP': '#FFFFFF'
+    'K': '#FFD700', 'KK': '#FFD700', 'KE': '#FFD700', 'J': '#008B00',
+    'SL': '#008B00', 'KSach': '#FFD700', 'Sach': '#1874CD', 'MSP': '#5A5F63'
   };
   
   var PAGE = 40;
@@ -370,7 +370,7 @@
     if (SIGNATUR_FARBEN[sig]) return SIGNATUR_FARBEN[sig];
     var base = sig.replace(/_.*$/, '');
     if (SIGNATUR_FARBEN[base]) return SIGNATUR_FARBEN[base];
-    return '#FFFFFF';
+    return '#5A5F63';
   }
 
   function highlight(text) {
