@@ -183,14 +183,14 @@
 
   /* ------------------------------------------------------------------
      Farben der Rückenschilder. Ein Eintrag pro Signatur; alle anderen
-     Signaturen bekommen automatisch eine feste Farbe aus der Palette.
+     Signaturen bekommen automatisch eine feste Farbe weiss.
      Hier lassen sich die Farben an die echten Aufkleber angleichen.
   ------------------------------------------------------------------ */
   var SIGNATUR_FARBEN = {
-    'K': '#1B5E73', 'KK': '#8A6100', 'KE': '#3F6B3A', 'J': '#7A3E65',
-    'SL': '#2F5D8C', 'KSach': '#A4472B', 'Sach': '#5B4B8A', 'MSP': '#5A5F63'
+    'K': '#FFF536', 'KK': '#FFF536', 'KE': '#FFF536', 'J': '#3BCC1D',
+    'SL': '#3BCC1D', 'KSach': '#FFF536', 'Sach': '#2498FF', 'MSP': '#FFFFFF'
   };
-  var PALETTE = ['#1B5E73', '#7A3E65', '#3F6B3A', '#A4472B', '#5B4B8A', '#8A6100', '#2F5D8C', '#5A5F63'];
+  
   var PAGE = 40;
 
   var $ = function (id) { return document.getElementById(id); };
@@ -370,9 +370,7 @@
     if (SIGNATUR_FARBEN[sig]) return SIGNATUR_FARBEN[sig];
     var base = sig.replace(/_.*$/, '');
     if (SIGNATUR_FARBEN[base]) return SIGNATUR_FARBEN[base];
-    var h = 0;
-    for (var i = 0; i < base.length; i++) h = (h * 31 + base.charCodeAt(i)) >>> 0;
-    return PALETTE[h % PALETTE.length];
+    return return '#FFFFFF';
   }
 
   function highlight(text) {
