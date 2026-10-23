@@ -188,7 +188,7 @@
   ------------------------------------------------------------------ */
   var SIGNATUR_FARBEN = {
     'K': '#FFD700', 'KK': '#FFD700', 'KE': '#FFD700', 'J': '#008B00',
-    'SL': '#008B00', 'KSach': '#FFD700', 'Sach': '#1874CD', 'MSP': '#5A5F63'
+    'SL': '#008B00', 'KSach': '#FFD700', 'Sach': '#1874CD', 'MSP': '#DCDCDC'
   };
   
   var PAGE = 40;
@@ -366,11 +366,11 @@
 
   /* ---------- Darstellung ---------- */
   function toneFor(sig) {
-    if (!sig) return '#5A5F63';
+    if (!sig) return '#DCDCDC';
     if (SIGNATUR_FARBEN[sig]) return SIGNATUR_FARBEN[sig];
     var base = sig.replace(/_.*$/, '');
     if (SIGNATUR_FARBEN[base]) return SIGNATUR_FARBEN[base];
-    return '#5A5F63';
+    return '#DCDCDC';
   }
 
   function highlight(text) {
